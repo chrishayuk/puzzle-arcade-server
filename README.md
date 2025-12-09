@@ -5,7 +5,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-A multi-game puzzle server hosting 7 different logic puzzle types, built using the [chuk-protocol-server](https://github.com/chrishayuk/chuk-protocol-server) framework. Perfect for demonstrating LLM reasoning capabilities and constraint solver generality!
+A multi-game puzzle server hosting 11 different logic puzzle types, built using the [chuk-protocol-server](https://github.com/chrishayuk/chuk-protocol-server) framework. Perfect for demonstrating LLM reasoning capabilities and constraint solver generality!
 
 ## Try It Now
 
@@ -23,7 +23,9 @@ Once connected, type `help` to see available games, or `sudoku easy` to start pl
 
 ## Features
 
-- **7 Classic Puzzle Games** with three difficulty levels each (easy, medium, hard)
+- **11 Puzzle Games** with three difficulty levels each (easy, medium, hard)
+  - **7 Classic Logic Puzzles** - Sudoku, KenKen, Kakuro, Binary, Futoshiki, Nonogram, Logic Grid
+  - **4 Advanced CP-SAT Showcases** - Killer Sudoku, Lights Out, Mastermind, Slitherlink
 - **Multiple transport protocols:**
   - **Telnet** (port 8023) - Classic telnet protocol
   - **TCP** (port 8024) - Raw TCP connections
@@ -33,11 +35,13 @@ Once connected, type `help` to see available games, or `sudoku easy` to start pl
 - **Hint system** for when you're stuck
 - **Solution checker** and auto-solver for all games
 - **Clean ASCII art grids** - perfectly aligned for easy parsing
-- **Comprehensive test suite** (129 tests, 94% coverage)
+- **Comprehensive test suite** (246 tests, 94% coverage)
 - **Modern Python packaging** with pyproject.toml
 - **Docker and Fly.io deployment** ready
 
 ## Available Games
+
+### Classic Logic Puzzles
 
 | Game | Grid Size | Constraint Types | Status |
 |------|-----------|------------------|--------|
@@ -48,6 +52,15 @@ Once connected, type `help` to see available games, or `sudoku easy` to start pl
 | **Futoshiki** | 4×4 to 6×6 | Inequalities + AllDifferent | ✅ Complete |
 | **Nonogram** | 5×5 to 10×10 | Line sum constraints + Blocks | ✅ Complete |
 | **Logic Grid** | Variable | Category associations + Logic | ✅ Complete |
+
+### Advanced CP-SAT Puzzles
+
+| Game | Grid Size | Constraint Types | Status |
+|------|-----------|------------------|--------|
+| **Killer Sudoku** | 9×9 | Linear constraints + AllDifferent + Cages | ✅ Complete |
+| **Lights Out** | 5×5 to 7×7 | Boolean XOR constraints (SAT) | ✅ Complete |
+| **Mastermind** | 4-6 pegs | Deduction + Feedback constraints | ✅ Complete |
+| **Slitherlink** | 5×5 to 10×10 | Global loop + Edge constraints | ✅ Complete |
 
 ## Quick Start
 
@@ -164,8 +177,7 @@ When you connect, you'll see the main menu:
        WELCOME TO THE PUZZLE ARCADE!
 ==================================================
 
-Select a game:
-
+CLASSIC LOGIC PUZZLES:
   1) Sudoku          - Classic logic puzzle - fill 9x9 grid with digits 1-9
   2) KenKen          - Arithmetic cage puzzle - combine math and logic
   3) Kakuro          - Crossword math puzzle - fill runs with unique digits that sum to clues
@@ -173,6 +185,12 @@ Select a game:
   5) Futoshiki       - Inequality number puzzle - fill grid with constraints
   6) Nonogram        - Picture logic puzzle - reveal image from number clues
   7) Logic Grid      - Deductive reasoning puzzle - match attributes using logic
+
+ADVANCED CP-SAT PUZZLES:
+  8) Killer Sudoku   - Sudoku + Kakuro - regions must sum to targets
+  9) Lights Out      - Toggle lights to turn all off - XOR constraint puzzle
+ 10) Mastermind      - Code-breaking with logical deduction and feedback
+ 11) Slitherlink     - Draw a single loop - numbers show edge counts
 
 Commands:
   <number>  - Select game by number
@@ -354,7 +372,7 @@ pip install -e ".[dev]"
 
 ### Testing
 
-The project has comprehensive test coverage (94%, 129 tests):
+The project has comprehensive test coverage (94%, 246 tests):
 
 ```bash
 # Run all tests
@@ -378,9 +396,13 @@ src/puzzle_arcade_server/games/__init__.py        100%
 src/puzzle_arcade_server/games/binary.py           99%
 src/puzzle_arcade_server/games/futoshiki.py        98%
 src/puzzle_arcade_server/games/kakuro.py           95%
+src/puzzle_arcade_server/games/lights_out.py       94%
+src/puzzle_arcade_server/games/killer_sudoku.py    93%
 src/puzzle_arcade_server/games/nonogram.py         93%
+src/puzzle_arcade_server/games/mastermind.py       92%
 src/puzzle_arcade_server/games/sudoku.py           92%
 src/puzzle_arcade_server/games/kenken.py           91%
+src/puzzle_arcade_server/games/slitherlink.py      91%
 src/puzzle_arcade_server/games/logic_grid.py       90%
 ------------------------------------------------------
 TOTAL                                               94%
@@ -525,7 +547,11 @@ puzzle-arcade-server/
 │       │   ├── binary.py         # Binary (6×6-10×10, 154 lines, 99% coverage)
 │       │   ├── futoshiki.py      # Futoshiki (4×4-6×6, 160 lines, 98% coverage)
 │       │   ├── nonogram.py       # Nonogram (5×5-10×10, 116 lines, 93% coverage)
-│       │   └── logic_grid.py     # Logic Grid (117 lines, 90% coverage)
+│       │   ├── logic_grid.py     # Logic Grid (117 lines, 90% coverage)
+│       │   ├── killer_sudoku.py  # Killer Sudoku (9×9, 404 lines, 93% coverage)
+│       │   ├── lights_out.py     # Lights Out (5×5-7×7, 204 lines, 94% coverage)
+│       │   ├── mastermind.py     # Mastermind (4-6 pegs, 258 lines, 92% coverage)
+│       │   └── slitherlink.py    # Slitherlink (5×5-10×10, 343 lines, 91% coverage)
 │       └── utils/
 │           └── __init__.py       # Utility functions
 ├── tests/
@@ -536,7 +562,11 @@ puzzle-arcade-server/
 │   ├── test_binary_game.py       # Binary tests (27 tests)
 │   ├── test_futoshiki_game.py    # Futoshiki tests (25 tests)
 │   ├── test_nonogram_game.py     # Nonogram tests (12 tests)
-│   └── test_logic_grid_game.py   # Logic Grid tests (13 tests)
+│   ├── test_logic_grid_game.py   # Logic Grid tests (13 tests)
+│   ├── test_killer_sudoku.py     # Killer Sudoku tests (27 tests)
+│   ├── test_lights_out.py        # Lights Out tests (23 tests)
+│   ├── test_mastermind.py        # Mastermind tests (31 tests)
+│   └── test_slitherlink.py       # Slitherlink tests (33 tests)
 ├── examples/
 │   ├── simple_client.py          # Telnet client example
 │   ├── websocket_client.py       # WebSocket client example
@@ -558,9 +588,11 @@ puzzle-arcade-server/
 
 ### Key Statistics
 
-- **Total Lines of Code**: ~1,038 statements in src/
-- **Test Coverage**: 94% overall (129 tests)
-- **Games Implemented**: 7 complete puzzle types
+- **Total Lines of Code**: ~1,900+ statements in src/
+- **Test Coverage**: 94% overall (246 tests)
+- **Games Implemented**: 11 complete puzzle types
+  - 7 Classic Logic Puzzles
+  - 4 Advanced CP-SAT Showcases
 - **Supported Transports**: 4 (Telnet, TCP, WebSocket, WS-Telnet)
 - **Make Targets**: 50+ development commands
 
@@ -591,9 +623,15 @@ Test the generality of constraint solvers (like MCP solvers):
 
 Learn about constraint satisfaction problems:
 
-- **7 different CSP types** with varying constraints
-- **Well-documented code** showing puzzle generation
-- **Comprehensive tests** demonstrating validation
+- **11 different puzzle types** demonstrating various constraint types:
+  - AllDifferent constraints (Sudoku, KenKen, Futoshiki)
+  - Arithmetic constraints (KenKen, Kakuro, Killer Sudoku)
+  - Boolean/SAT constraints (Lights Out, Binary Puzzle)
+  - Loop/Edge constraints (Slitherlink)
+  - Deduction constraints (Mastermind, Logic Grid)
+  - And more!
+- **Well-documented code** showing puzzle generation algorithms
+- **Comprehensive tests** (246 tests, 94% coverage) demonstrating validation
 - **Clean architecture** for adding new puzzles
 
 ## Adding New Puzzle Games
