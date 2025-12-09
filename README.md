@@ -1,7 +1,8 @@
 # Puzzle Arcade Server
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Test](https://github.com/chrishayuk/puzzle-arcade-server/workflows/Test/badge.svg)](https://github.com/chrishayuk/puzzle-arcade-server/actions)
 [![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)](htmlcov/index.html)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
 A multi-game puzzle server hosting 7 different logic puzzle types, built using the [chuk-protocol-server](https://github.com/chrishayuk/chuk-protocol-server) framework. Perfect for demonstrating LLM reasoning capabilities and constraint solver generality!
@@ -428,6 +429,17 @@ make example-ws-solve            # Solve with hints
 make example-ws-interactive      # Interactive mode
 ```
 
+### CI/CD
+
+The project includes GitHub Actions workflows:
+
+- **test.yml**: Runs tests on Ubuntu, Windows, macOS with Python 3.11, 3.12, 3.13
+- **publish.yml**: Publishes to PyPI on release
+- **release.yml**: Creates GitHub releases
+- **fly-deploy.yml**: Auto-deploys to Fly.io on main branch push
+
+Coverage threshold is set to 90% - builds fail if coverage drops below this.
+
 ## Deployment to Fly.io
 
 ### Using Make (Recommended)
@@ -530,7 +542,11 @@ puzzle-arcade-server/
 │   ├── websocket_client.py       # WebSocket client example
 │   └── README.md                 # Example usage guide
 ├── .github/
-│   └── workflows/                # CI/CD workflows (coming soon)
+│   └── workflows/
+│       ├── test.yml              # Multi-platform CI testing
+│       ├── publish.yml           # PyPI publishing
+│       ├── release.yml           # GitHub releases
+│       └── fly-deploy.yml        # Fly.io deployment
 ├── pyproject.toml                # Modern Python project config
 ├── config.yaml                   # Multi-transport server configuration
 ├── Dockerfile                    # Docker build instructions
