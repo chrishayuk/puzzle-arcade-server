@@ -3,7 +3,10 @@
 import random
 from typing import Any
 
+from puzzle_arcade_server.models.enums import DifficultyLevel
+
 from ..base.puzzle_game import PuzzleGame
+from ..models import Item, KnapsackAction, KnapsackConfig, MoveResult
 
 
 class KnapsackGame(PuzzleGame):
@@ -22,19 +25,12 @@ class KnapsackGame(PuzzleGame):
         """
         super().__init__(difficulty)
 
-        # Difficulty affects number of items and complexity
-        config = {
-            "easy": {"num_items": 5, "capacity_factor": 0.6},
-            "medium": {"num_items": 8, "capacity_factor": 0.5},
-            "hard": {"num_items": 12, "capacity_factor": 0.4},
-        }
-        self.config = config.get(difficulty, config["easy"])
+        # Use pydantic config based on difficulty
+        self.config = KnapsackConfig.from_difficulty(self.difficulty)
+        self.max_weight = self.config.max_weight
 
-        self.num_items: int = int(self.config["num_items"])
-        self.capacity_factor: float = float(self.config["capacity_factor"])
-
-        # Item properties
-        self.items: list[dict[str, str | int]] = []
+        # Item properties - now using Item pydantic model
+        self.items: list[Item] = []
         self.capacity: int = 0
 
         # Player's selection (True = selected, False = not selected)
@@ -54,7 +50,7 @@ class KnapsackGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Optimize item selection to maximize value within weight limit"
 
-    def generate_puzzle(self) -> None:
+    async def generate_puzzle(self) -> None:
         """Generate a new Knapsack puzzle."""
         # Generate random items with weights and values
         item_names = [
@@ -78,22 +74,30 @@ class KnapsackGame(PuzzleGame):
         self.items = []
         total_weight = 0
 
-        for i in range(self.num_items):
+        num_items = self.config.num_items
+
+        for i in range(num_items):
             name = item_names[i] if i < len(item_names) else f"Item {i + 1}"
             weight = random.randint(1, 10)
             # Value roughly correlates with weight but with variance
             value = random.randint(weight * 5, weight * 15)
 
-            self.items.append({"name": name, "weight": weight, "value": value})
+            self.items.append(Item(name=name, weight=weight, value=value))
             total_weight += weight
 
         # Set capacity as a fraction of total weight
-        self.capacity = int(total_weight * self.capacity_factor)
+        capacity_factor_map = {
+            DifficultyLevel.EASY: 0.6,
+            DifficultyLevel.MEDIUM: 0.5,
+            DifficultyLevel.HARD: 0.4,
+        }
+        capacity_factor = capacity_factor_map[self.difficulty]
+        self.capacity = int(total_weight * capacity_factor)
         if self.capacity < 5:
             self.capacity = 5  # Minimum capacity
 
         # Initialize empty selection
-        self.selection = [False] * self.num_items
+        self.selection = [False] * num_items
 
         # Calculate optimal solution using dynamic programming
         self._solve_optimal()
@@ -112,8 +116,8 @@ class KnapsackGame(PuzzleGame):
         # Fill the DP table
         for i in range(1, n + 1):
             item = self.items[i - 1]
-            weight = int(item["weight"])
-            value = int(item["value"])
+            weight = item.weight
+            value = item.value
 
             for w in range(capacity + 1):
                 # Don't take item i
@@ -131,9 +135,9 @@ class KnapsackGame(PuzzleGame):
         for i in range(n, 0, -1):
             if dp[i][w] != dp[i - 1][w]:
                 self.optimal_selection[i - 1] = True
-                w -= int(self.items[i - 1]["weight"])
+                w -= self.items[i - 1].weight
 
-    def validate_move(self, action: str, item_index: int) -> tuple[bool, str]:
+    async def validate_move(self, action: str, item_index: int) -> MoveResult:
         """Toggle item selection.
 
         Args:
@@ -141,55 +145,63 @@ class KnapsackGame(PuzzleGame):
             item_index: Item number (1-indexed, user-facing)
 
         Returns:
-            Tuple of (success, message)
+            MoveResult with success status and message
         """
         # Convert to 0-indexed
         item_index -= 1
 
         # Validate item index
         if not (0 <= item_index < len(self.items)):
-            return False, f"Invalid item number. Use 1-{len(self.items)}."
+            return MoveResult(success=False, message=f"Invalid item number. Use 1-{len(self.items)}.")
 
-        action = action.lower()
+        # Parse action using KnapsackAction enum
+        try:
+            action_enum = KnapsackAction(action.lower())
+        except ValueError:
+            return MoveResult(success=False, message="Invalid action. Use 'select' or 'deselect'.")
 
-        if action == "select":
+        if action_enum == KnapsackAction.SELECT:
             if self.selection[item_index]:
-                return False, "Item is already selected."
+                return MoveResult(success=False, message="Item is already selected.")
 
             # Check if adding this item exceeds capacity
             current_weight = self._get_current_weight()
-            item_weight = int(self.items[item_index]["weight"])
+            item_weight = self.items[item_index].weight
 
             if current_weight + item_weight > self.capacity:
-                return (
-                    False,
-                    f"Cannot select - would exceed capacity! (Current: {current_weight}, Item: {item_weight}, Capacity: {self.capacity})",
+                return MoveResult(
+                    success=False,
+                    message=f"Cannot select - would exceed capacity! (Current: {current_weight}, Item: {item_weight}, Capacity: {self.capacity})",
                 )
 
             self.selection[item_index] = True
             self.moves_made += 1
-            item_name = self.items[item_index]["name"]
-            return True, f"Selected {item_name} (weight: {item_weight}, value: ${self.items[item_index]['value']})"
+            item_name = self.items[item_index].name
+            return MoveResult(
+                success=True,
+                message=f"Selected {item_name} (weight: {item_weight}, value: ${self.items[item_index].value})",
+                state_changed=True,
+            )
 
-        elif action == "deselect":
+        elif action_enum == KnapsackAction.DESELECT:
             if not self.selection[item_index]:
-                return False, "Item is not currently selected."
+                return MoveResult(success=False, message="Item is not currently selected.")
 
             self.selection[item_index] = False
             self.moves_made += 1
-            item_name = self.items[item_index]["name"]
-            return True, f"Deselected {item_name}"
+            item_name = self.items[item_index].name
+            return MoveResult(success=True, message=f"Deselected {item_name}", state_changed=True)
 
-        else:
-            return False, "Invalid action. Use 'select' or 'deselect'."
+        # Should never reach here due to enum validation above
+        return MoveResult(success=False, message="Invalid action. Use 'select' or 'deselect'.")
 
     def _get_current_weight(self) -> int:
         """Calculate total weight of currently selected items."""
-        return sum(int(self.items[i]["weight"]) for i in range(len(self.items)) if self.selection[i])
+        return sum(self.items[i].weight for i in range(len(self.items)) if self.selection[i])
 
     def _get_current_value(self) -> int:
         """Calculate total value of currently selected items."""
-        return sum(int(self.items[i]["value"]) for i in range(len(self.items)) if self.selection[i])
+        return sum(self.items[i].value for i in range(len(self.items)) if self.selection[i])
 
     def is_complete(self) -> bool:
         """Check if the solution is optimal.
@@ -199,7 +211,7 @@ class KnapsackGame(PuzzleGame):
         """
         return self._get_current_value() == self.optimal_value
 
-    def get_hint(self) -> tuple[Any, str] | None:
+    async def get_hint(self) -> tuple[Any, str] | None:
         """Get a hint for the next move.
 
         Returns:
@@ -209,14 +221,14 @@ class KnapsackGame(PuzzleGame):
         for i in range(len(self.items)):
             if self.optimal_selection[i] and not self.selection[i]:
                 hint_data = ("select", i + 1)
-                hint_message = f"Try selecting item {i + 1} ({self.items[i]['name']})"
+                hint_message = f"Try selecting item {i + 1} ({self.items[i].name})"
                 return hint_data, hint_message
 
         # Suggest deselecting an item that's not in the optimal solution but is selected
         for i in range(len(self.items)):
             if not self.optimal_selection[i] and self.selection[i]:
                 hint_data = ("deselect", i + 1)
-                hint_message = f"Try deselecting item {i + 1} ({self.items[i]['name']})"
+                hint_message = f"Try deselecting item {i + 1} ({self.items[i].name})"
                 return hint_data, hint_message
 
         return None
@@ -241,9 +253,7 @@ class KnapsackGame(PuzzleGame):
 
         for i, item in enumerate(self.items):
             selected = "✓" if self.selection[i] else " "
-            lines.append(
-                f"  {i + 1:2d} | {item['name']:<13s} | {item['weight']:4d}kg | ${item['value']:5d} |    {selected}"
-            )
+            lines.append(f"  {i + 1:2d} | {item.name:<13s} | {item.weight:4d}kg | ${item.value:5d} |    {selected}")
 
         lines.append("")
         lines.append(f"Space Remaining: {self.capacity - self._get_current_weight()} kg")

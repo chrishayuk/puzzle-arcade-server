@@ -4,6 +4,7 @@ import random
 from typing import Any
 
 from ..base.puzzle_game import PuzzleGame
+from ..models import KakuroConfig, MoveResult
 
 
 class KakuroGame(PuzzleGame):
@@ -18,12 +19,13 @@ class KakuroGame(PuzzleGame):
         """Initialize a new Kakuro game.
 
         Args:
-            difficulty: Game difficulty level (easy=5x5, medium=7x7, hard=9x9)
+            difficulty: Game difficulty level (easy=4x4, medium=6x6, hard=8x8)
         """
         super().__init__(difficulty)
 
-        # Grid size based on difficulty
-        self.size = {"easy": 5, "medium": 7, "hard": 9}.get(difficulty, 5)
+        # Use pydantic config based on difficulty
+        self.config = KakuroConfig.from_difficulty(self.difficulty)
+        self.size = self.config.size
 
         # Grid: 0 = empty/playable, -1 = black cell
         self.grid = [[0 for _ in range(self.size)] for _ in range(self.size)]
@@ -105,7 +107,7 @@ class KakuroGame(PuzzleGame):
 
         return runs
 
-    def generate_puzzle(self) -> None:
+    async def generate_puzzle(self) -> None:
         """Generate a new Kakuro puzzle."""
         # Create pattern
         self._create_pattern()
@@ -139,7 +141,7 @@ class KakuroGame(PuzzleGame):
         self.moves_made = 0
         self.game_started = True
 
-    def validate_move(self, row: int, col: int, num: int) -> tuple[bool, str]:
+    async def validate_move(self, row: int, col: int, num: int) -> MoveResult:
         """Place a number on the grid.
 
         Args:
@@ -148,7 +150,7 @@ class KakuroGame(PuzzleGame):
             num: Number to place (1-9, or 0 to clear)
 
         Returns:
-            Tuple of (success, message)
+            MoveResult with success status and message
         """
         # Convert to 0-indexed
         row -= 1
@@ -156,24 +158,24 @@ class KakuroGame(PuzzleGame):
 
         # Validate coordinates
         if not (0 <= row < self.size and 0 <= col < self.size):
-            return False, f"Invalid coordinates. Use row and column between 1-{self.size}."
+            return MoveResult(success=False, message=f"Invalid coordinates. Use row and column between 1-{self.size}.")
 
         # Check if this is a black cell
         if self.initial_grid[row][col] == -1:
-            return False, "Cannot place numbers in black cells."
+            return MoveResult(success=False, message="Cannot place numbers in black cells.")
 
         # Clear the cell
         if num == 0:
             self.grid[row][col] = 0
-            return True, "Cell cleared."
+            return MoveResult(success=True, message="Cell cleared.", state_changed=True)
 
         # Validate number
         if not (1 <= num <= 9):
-            return False, "Invalid number. Use 1-9 or 0 to clear."
+            return MoveResult(success=False, message="Invalid number. Use 1-9 or 0 to clear.")
 
         self.grid[row][col] = num
         self.moves_made += 1
-        return True, "Number placed successfully!"
+        return MoveResult(success=True, message="Number placed successfully!", state_changed=True)
 
     def is_complete(self) -> bool:
         """Check if the puzzle is complete and correct."""
@@ -187,7 +189,7 @@ class KakuroGame(PuzzleGame):
 
         return True
 
-    def get_hint(self) -> tuple[Any, str] | None:
+    async def get_hint(self) -> tuple[Any, str] | None:
         """Get a hint for the next move.
 
         Returns:

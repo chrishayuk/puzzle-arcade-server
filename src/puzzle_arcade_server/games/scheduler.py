@@ -4,6 +4,8 @@ import random
 from typing import Any
 
 from ..base.puzzle_game import PuzzleGame
+from ..constants import SCHEDULER_TASK_NAMES
+from ..models import MoveResult, SchedulerAction, SchedulerConfig, Task
 
 
 class SchedulerGame(PuzzleGame):
@@ -22,19 +24,13 @@ class SchedulerGame(PuzzleGame):
         """
         super().__init__(difficulty)
 
-        # Difficulty configuration
-        config = {
-            "easy": {"num_tasks": 4, "num_workers": 2, "dependency_prob": 0.3},
-            "medium": {"num_tasks": 6, "num_workers": 2, "dependency_prob": 0.4},
-            "hard": {"num_tasks": 8, "num_workers": 3, "dependency_prob": 0.5},
-        }
-        self.config = config.get(difficulty, config["easy"])
+        # Configuration using Pydantic model
+        self.config = SchedulerConfig.from_difficulty(self.difficulty)
+        self.num_tasks: int = self.config.num_tasks
+        self.num_workers: int = self.config.num_workers
 
-        self.num_tasks: int = int(self.config["num_tasks"])
-        self.num_workers: int = int(self.config["num_workers"])
-
-        # Task properties
-        self.tasks: list[dict[str, Any]] = []
+        # Task properties - using Task model
+        self.tasks: list[Task] = []
         self.dependencies: list[tuple[int, int]] = []  # (task_a, task_b) means A must finish before B starts
 
         # Player's schedule: task_id -> (worker_id, start_time)
@@ -54,22 +50,22 @@ class SchedulerGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Schedule tasks with dependencies to minimize completion time"
 
-    def generate_puzzle(self) -> None:
+    async def generate_puzzle(self) -> None:
         """Generate a new Scheduler puzzle."""
-        # Generate tasks with random durations
-        task_names = ["Task A", "Task B", "Task C", "Task D", "Task E", "Task F", "Task G", "Task H"]
-
+        # Generate tasks with random durations using constants
         self.tasks = []
         for i in range(self.num_tasks):
-            name = task_names[i] if i < len(task_names) else f"Task {chr(65 + i)}"
+            name = SCHEDULER_TASK_NAMES[i] if i < len(SCHEDULER_TASK_NAMES) else f"Task {chr(65 + i)}"
             duration = random.randint(2, 8)
-            self.tasks.append({"id": i, "name": name, "duration": duration})
+            dependencies: list[int] = []
+            task = Task(id=i, name=name, duration=duration, dependencies=dependencies)
+            self.tasks.append(task)
 
         # Generate dependencies (DAG - no cycles)
         self.dependencies = []
         for i in range(self.num_tasks):
             for j in range(i + 1, self.num_tasks):
-                if random.random() < self.config["dependency_prob"]:
+                if random.random() < self.config.dependency_prob:
                     # Task i must complete before task j can start
                     self.dependencies.append((i, j))
 
@@ -101,7 +97,7 @@ class SchedulerGame(PuzzleGame):
             for dependent in adj_list[task]:
                 # Dependent can't start until current task finishes
                 earliest_start[dependent] = max(
-                    earliest_start[dependent], earliest_start[task] + self.tasks[task]["duration"]
+                    earliest_start[dependent], earliest_start[task] + self.tasks[task].duration
                 )
                 in_degree[dependent] -= 1
                 if in_degree[dependent] == 0:
@@ -121,12 +117,12 @@ class SchedulerGame(PuzzleGame):
 
             # Store 1-indexed worker_id for consistency
             self.optimal_schedule[task_id] = (earliest_worker + 1, start_time)
-            worker_available[earliest_worker] = start_time + self.tasks[task_id]["duration"]
+            worker_available[earliest_worker] = start_time + self.tasks[task_id].duration
 
         # Calculate makespan
         self.optimal_makespan = max(worker_available)
 
-    def validate_move(self, task_id: int | str, worker_id: int, start_time: int) -> tuple[bool, str]:
+    async def validate_move(self, task_id: int | str, worker_id: int, start_time: int) -> MoveResult:
         """Assign a task to a worker at a specific start time, or unassign a task.
 
         Args:
@@ -135,11 +131,11 @@ class SchedulerGame(PuzzleGame):
             start_time: Start time (0 or positive integer) when assigning, unused when unassigning
 
         Returns:
-            Tuple of (success, message)
+            MoveResult with success status and message
         """
         # Handle unassign action
-        if isinstance(task_id, str) and task_id.lower() == "unassign":
-            return self._unassign_task(worker_id)
+        if isinstance(task_id, str) and task_id.lower() == SchedulerAction.UNASSIGN.value:
+            return await self._unassign_task(worker_id)
 
         # Convert to 0-indexed
         task_id = int(task_id) - 1
@@ -147,80 +143,93 @@ class SchedulerGame(PuzzleGame):
 
         # Validate inputs
         if not (0 <= task_id < self.num_tasks):
-            return False, f"Invalid task number. Use 1-{self.num_tasks}."
+            return MoveResult(success=False, message=f"Invalid task number. Use 1-{self.num_tasks}.")
 
         if not (0 <= worker_id < self.num_workers):
-            return False, f"Invalid worker number. Use 1-{self.num_workers}."
+            return MoveResult(success=False, message=f"Invalid worker number. Use 1-{self.num_workers}.")
 
         if start_time < 0:
-            return False, "Start time must be non-negative."
+            return MoveResult(success=False, message="Start time must be non-negative.")
 
-        # Check if task is already scheduled
-        if task_id in self.schedule:
-            return False, f"{self.tasks[task_id]['name']} is already scheduled. Use 'unassign' first."
+        # Check if task is already scheduled - allow reassignment
+        is_reassignment = task_id in self.schedule
 
         # Check dependencies
         for dep_task, dependent in self.dependencies:
             if dependent == task_id:
                 # This task depends on dep_task
                 if dep_task not in self.schedule:
-                    return False, f"Cannot schedule - {self.tasks[dep_task]['name']} must be scheduled first."
+                    return MoveResult(
+                        success=False,
+                        message=f"Cannot schedule - {self.tasks[dep_task].name} must be scheduled first.",
+                    )
 
                 dep_worker, dep_start = self.schedule[dep_task]
-                dep_end = dep_start + self.tasks[dep_task]["duration"]
+                dep_end = dep_start + self.tasks[dep_task].duration
 
                 if start_time < dep_end:
-                    return (
-                        False,
-                        f"Cannot start at {start_time} - {self.tasks[dep_task]['name']} finishes at {dep_end}.",
+                    return MoveResult(
+                        success=False,
+                        message=f"Cannot start at {start_time} - {self.tasks[dep_task].name} finishes at {dep_end}.",
                     )
 
         # Check worker availability (no overlap)
-        task_duration = self.tasks[task_id]["duration"]
+        task_duration = self.tasks[task_id].duration
         task_end = start_time + task_duration
 
         for other_task_id, (other_worker, other_start) in self.schedule.items():
             if other_worker == worker_id + 1:  # other_worker is 1-indexed in schedule
-                other_end = other_start + self.tasks[other_task_id]["duration"]
+                other_end = other_start + self.tasks[other_task_id].duration
                 # Check for overlap
                 if not (task_end <= other_start or start_time >= other_end):
-                    return (
-                        False,
-                        f"Worker {worker_id + 1} is busy with {self.tasks[other_task_id]['name']} from {other_start} to {other_end}.",
+                    return MoveResult(
+                        success=False,
+                        message=f"Worker {worker_id + 1} is busy with {self.tasks[other_task_id].name} from {other_start} to {other_end}.",
                     )
 
         # Schedule the task (store 1-indexed worker_id for consistency with user input)
         self.schedule[task_id] = (worker_id + 1, start_time)
         self.moves_made += 1
 
-        task_name = self.tasks[task_id]["name"]
-        return True, f"Scheduled {task_name} on Worker {worker_id + 1} at time {start_time}"
+        task_name = self.tasks[task_id].name
+        if is_reassignment:
+            return MoveResult(
+                success=True,
+                message=f"Reassigned {task_name} to Worker {worker_id + 1} at time {start_time}",
+                state_changed=True,
+            )
+        else:
+            return MoveResult(
+                success=True,
+                message=f"Scheduled {task_name} on Worker {worker_id + 1} at time {start_time}",
+                state_changed=True,
+            )
 
-    def _unassign_task(self, task_id: int) -> tuple[bool, str]:
+    async def _unassign_task(self, task_id: int) -> MoveResult:
         """Unassign a task from the schedule.
 
         Args:
             task_id: Task number (1-indexed)
 
         Returns:
-            Tuple of (success, message)
+            MoveResult with success status and message
         """
         task_id -= 1
 
         if task_id not in self.schedule:
-            return False, f"{self.tasks[task_id]['name']} is not currently scheduled."
+            return MoveResult(success=False, message=f"{self.tasks[task_id].name} is not currently assigned.")
 
         # Check if any scheduled task depends on this one
         for dep_task, dependent in self.dependencies:
             if dep_task == task_id and dependent in self.schedule:
-                return (
-                    False,
-                    f"Cannot unassign - {self.tasks[dependent]['name']} depends on {self.tasks[task_id]['name']}.",
+                return MoveResult(
+                    success=False,
+                    message=f"Cannot unassign - {self.tasks[dependent].name} depends on {self.tasks[task_id].name}.",
                 )
 
         del self.schedule[task_id]
         self.moves_made += 1
-        return True, f"Unassigned {self.tasks[task_id]['name']}"
+        return MoveResult(success=True, message=f"Unassigned {self.tasks[task_id].name}", state_changed=True)
 
     def _get_makespan(self) -> int:
         """Calculate the makespan (total completion time) of current schedule."""
@@ -229,7 +238,7 @@ class SchedulerGame(PuzzleGame):
 
         max_end = 0
         for task_id, (_worker, start_time) in self.schedule.items():
-            end_time = start_time + self.tasks[task_id]["duration"]
+            end_time = start_time + self.tasks[task_id].duration
             max_end = max(max_end, end_time)
 
         return max_end
@@ -243,7 +252,7 @@ class SchedulerGame(PuzzleGame):
         # Check if makespan is optimal
         return self._get_makespan() == self.optimal_makespan
 
-    def get_hint(self) -> tuple[Any, str] | None:
+    async def get_hint(self) -> tuple[Any, str] | None:
         """Get a hint for the next move.
 
         Returns:
@@ -253,10 +262,9 @@ class SchedulerGame(PuzzleGame):
         for task_id in range(self.num_tasks):
             if task_id not in self.schedule and task_id in self.optimal_schedule:
                 worker, start_time = self.optimal_schedule[task_id]
-                hint_data = (task_id + 1, worker + 1, start_time)
-                hint_message = (
-                    f"Try scheduling {self.tasks[task_id]['name']} on Worker {worker + 1} at time {start_time}"
-                )
+                # worker is already 1-indexed in optimal_schedule
+                hint_data = (task_id + 1, worker, start_time)
+                hint_message = f"Try scheduling {self.tasks[task_id].name} on Worker {worker} at time {start_time}"
                 return hint_data, hint_message
 
         return None
@@ -269,6 +277,7 @@ class SchedulerGame(PuzzleGame):
         """
         lines = []
 
+        lines.append("Task Scheduler")
         lines.append(f"Workers: {self.num_workers} | Tasks: {self.num_tasks}")
         lines.append(f"Current Makespan: {self._get_makespan()}")
         lines.append(f"Optimal Makespan: {self.optimal_makespan}")
@@ -280,22 +289,22 @@ class SchedulerGame(PuzzleGame):
         lines.append("  --+--------+----------+----------------------------------")
 
         for task in self.tasks:
-            task_id = task["id"]
+            task_id = task.id
             status = "Not scheduled"
 
             if task_id in self.schedule:
                 worker, start_time = self.schedule[task_id]
-                end_time = start_time + task["duration"]
-                status = f"Worker {worker + 1}, time {start_time}-{end_time}"
+                end_time = start_time + task.duration
+                status = f"Worker {worker}, time {start_time}-{end_time}"
 
-            lines.append(f"  {task_id + 1:2d} | {task['name']:<6s} | {task['duration']:4d}hrs  | {status}")
+            lines.append(f"  {task_id + 1:2d} | {task.name:<6s} | {task.duration:4d}hrs  | {status}")
 
         # Dependencies
         if self.dependencies:
             lines.append("")
             lines.append("Dependencies:")
             for task_a, task_b in self.dependencies:
-                lines.append(f"  {self.tasks[task_a]['name']} → {self.tasks[task_b]['name']}")
+                lines.append(f"  {self.tasks[task_a].name} → {self.tasks[task_b].name}")
 
         # Timeline visualization
         if self.schedule:
@@ -307,8 +316,8 @@ class SchedulerGame(PuzzleGame):
                 timeline = ["."] * (makespan + 1)
 
                 for task_id, (w, start) in self.schedule.items():
-                    if w == worker_id:
-                        duration = self.tasks[task_id]["duration"]
+                    if w == worker_id + 1:
+                        duration = self.tasks[task_id].duration
                         task_letter = chr(65 + task_id)  # A, B, C...
 
                         for t in range(start, start + duration):

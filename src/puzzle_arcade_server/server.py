@@ -19,6 +19,7 @@ from chuk_protocol_server.servers.telnet_server import TelnetServer
 
 from .base.puzzle_game import PuzzleGame
 from .games import AVAILABLE_GAMES
+from .models import DifficultyLevel, GameCommand
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -97,14 +98,14 @@ class ArcadeHandler(TelnetHandler):
             return
 
         # Validate difficulty
-        valid_difficulties = ["easy", "medium", "hard"]
+        valid_difficulties = [d.value for d in DifficultyLevel]
         if difficulty not in valid_difficulties:
             await self.send_line(f"Invalid difficulty. Choose from: {', '.join(valid_difficulties)}")
-            difficulty = "easy"
+            difficulty = DifficultyLevel.EASY.value
 
         # Create and initialize the game
         self.current_game = game_class(difficulty)  # type: ignore[abstract]
-        self.current_game.generate_puzzle()
+        await self.current_game.generate_puzzle()
         self.in_menu = False
 
         logger.info(f"Started {game_id} ({difficulty}) for {self.addr}")
@@ -158,14 +159,19 @@ class ArcadeHandler(TelnetHandler):
 
         cmd = parts[0]
 
-        if cmd == "quit" or cmd == "exit" or cmd == "q":
-            await self.send_line("Thanks for visiting the Puzzle Arcade! Goodbye!")
-            await self.end_session()
-            return
+        # Try to match command to enum
+        try:
+            cmd_enum = GameCommand(cmd)
+            if cmd_enum in (GameCommand.QUIT, GameCommand.EXIT, GameCommand.Q):
+                await self.send_line("Thanks for visiting the Puzzle Arcade! Goodbye!")
+                await self.end_session()
+                return
 
-        if cmd == "help":
-            await self.show_main_menu()
-            return
+            if cmd_enum == GameCommand.HELP:
+                await self.show_main_menu()
+                return
+        except ValueError:
+            pass  # Not a GameCommand enum, continue to game selection
 
         # Try to parse as game number
         if cmd.isdigit():
@@ -206,29 +212,36 @@ class ArcadeHandler(TelnetHandler):
 
         cmd = parts[0]
 
+        # Try to match command to enum
+        try:
+            cmd_enum = GameCommand(cmd)
+        except ValueError:
+            await self.send_line(f"Unknown command '{cmd}'. Type 'help' for available commands.")
+            return
+
         # Global commands
-        if cmd == "quit" or cmd == "exit" or cmd == "q":
+        if cmd_enum in (GameCommand.QUIT, GameCommand.EXIT, GameCommand.Q):
             await self.send_line("Thanks for playing! Goodbye!")
             await self.end_session()
             return
 
-        if cmd == "menu":
+        if cmd_enum in (GameCommand.MENU, GameCommand.M):
             await self.send_line("Returning to main menu...\n")
             self.current_game = None
             self.in_menu = True
             await self.show_main_menu()
             return
 
-        if cmd == "help":
+        if cmd_enum in (GameCommand.HELP, GameCommand.H):
             await self.show_game_help()
             return
 
-        if cmd == "show":
+        if cmd_enum in (GameCommand.SHOW, GameCommand.S):
             await self.display_puzzle()
             return
 
-        if cmd == "hint":
-            hint_result = self.current_game.get_hint()
+        if cmd_enum == GameCommand.HINT:
+            hint_result = await self.current_game.get_hint()
             if hint_result:
                 _, hint_message = hint_result
                 await self.send_line(f"Hint: {hint_message}")
@@ -236,7 +249,7 @@ class ArcadeHandler(TelnetHandler):
                 await self.send_line("No hints available. Puzzle is complete!")
             return
 
-        if cmd == "check":
+        if cmd_enum == GameCommand.CHECK:
             if self.current_game.is_complete():
                 await self.send_line("\n" + "=" * 50)
                 await self.send_line("CONGRATULATIONS! PUZZLE SOLVED!")
@@ -250,7 +263,7 @@ class ArcadeHandler(TelnetHandler):
             return
 
         # Game-specific commands (Sudoku example)
-        if cmd == "place":
+        if cmd_enum == GameCommand.PLACE:
             if len(parts) != 4:
                 await self.send_line("Usage: place <row> <col> <num>")
                 await self.send_line("Example: place 1 5 7")
@@ -261,10 +274,10 @@ class ArcadeHandler(TelnetHandler):
                 col = int(parts[2])
                 num = int(parts[3])
 
-                success, message = self.current_game.validate_move(row, col, num)
-                await self.send_line(message)
+                result = await self.current_game.validate_move(row, col, num)
+                await self.send_line(result.message)
 
-                if success:
+                if result.success:
                     await self.display_puzzle()
 
                     if self.current_game.is_complete():
@@ -279,7 +292,7 @@ class ArcadeHandler(TelnetHandler):
                 await self.send_line("Invalid input. Use numbers only.")
             return
 
-        if cmd == "clear":
+        if cmd_enum == GameCommand.CLEAR:
             if len(parts) != 3:
                 await self.send_line("Usage: clear <row> <col>")
                 return
@@ -288,17 +301,17 @@ class ArcadeHandler(TelnetHandler):
                 row = int(parts[1])
                 col = int(parts[2])
 
-                success, message = self.current_game.validate_move(row, col, 0)
-                await self.send_line(message)
+                result = await self.current_game.validate_move(row, col, 0)
+                await self.send_line(result.message)
 
-                if success:
+                if result.success:
                     await self.display_puzzle()
 
             except ValueError:
                 await self.send_line("Invalid input. Use numbers only.")
             return
 
-        if cmd == "solve":
+        if cmd_enum == GameCommand.SOLVE:
             await self.send_line("\nShowing solution...\n")
             # Copy solution to grid (game-specific)
             if hasattr(self.current_game, "solution"):
@@ -310,29 +323,29 @@ class ArcadeHandler(TelnetHandler):
             return
 
         # Logic Grid specific commands
-        if cmd == "connect":
+        if cmd_enum == GameCommand.CONNECT:
             if len(parts) != 5:
                 await self.send_line("Usage: connect <cat1> <val1> <cat2> <val2>")
                 await self.send_line("Example: connect person Alice color Red")
                 return
 
             cat1, val1, cat2, val2 = parts[1], parts[2], parts[3], parts[4]
-            success, message = self.current_game.validate_move(cat1, val1, cat2, val2, True)
-            await self.send_line(message)
-            if success:
+            result = await self.current_game.validate_move(cat1, val1, cat2, val2, True)
+            await self.send_line(result.message)
+            if result.success:
                 await self.display_puzzle()
             return
 
-        if cmd == "exclude":
+        if cmd_enum == GameCommand.EXCLUDE:
             if len(parts) != 5:
                 await self.send_line("Usage: exclude <cat1> <val1> <cat2> <val2>")
                 await self.send_line("Example: exclude person Bob pet Cat")
                 return
 
             cat1, val1, cat2, val2 = parts[1], parts[2], parts[3], parts[4]
-            success, message = self.current_game.validate_move(cat1, val1, cat2, val2, False)
-            await self.send_line(message)
-            if success:
+            result = await self.current_game.validate_move(cat1, val1, cat2, val2, False)
+            await self.send_line(result.message)
+            if result.success:
                 await self.display_puzzle()
             return
 

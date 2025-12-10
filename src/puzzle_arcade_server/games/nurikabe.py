@@ -1,9 +1,9 @@
 """Nurikabe puzzle game implementation."""
 
-import random
 from typing import Any
 
 from ..base.puzzle_game import PuzzleGame
+from ..models import MoveResult, NurikabeColor, NurikabeConfig
 
 
 class NurikabeGame(PuzzleGame):
@@ -24,8 +24,10 @@ class NurikabeGame(PuzzleGame):
         """
         super().__init__(difficulty)
 
-        # Grid size based on difficulty
-        self.size = {"easy": 6, "medium": 8, "hard": 10}.get(difficulty, 6)
+        # Load config from difficulty
+        self.config = NurikabeConfig.from_difficulty(self.difficulty)
+        self.size = self.config.size
+        self.num_islands = self.config.num_islands
 
         # Grid: 0 = unknown, 1 = white (island), 2 = black (sea)
         self.grid = [[0 for _ in range(self.size)] for _ in range(self.size)]
@@ -40,9 +42,6 @@ class NurikabeGame(PuzzleGame):
         # Given cells: set of (row, col) positions that show clue numbers
         self.given_cells: set[tuple[int, int]] = set()
 
-        # Number of islands for difficulty
-        self.num_islands = {"easy": 3, "medium": 4, "hard": 5}.get(difficulty, 3)
-
     @property
     def name(self) -> str:
         """The display name of this puzzle type."""
@@ -53,47 +52,32 @@ class NurikabeGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Create islands and sea - test connectivity reasoning"
 
-    def generate_puzzle(self) -> None:
-        """Generate a new Nurikabe puzzle."""
-        # For simplicity, we'll create a basic puzzle with predefined patterns
-        # A full implementation would use more sophisticated generation
+    async def generate_puzzle(self) -> None:
+        """Generate a new Nurikabe puzzle with sophisticated algorithm."""
+        max_attempts = 100
 
-        # Start with all black
-        self.solution = [[2 for _ in range(self.size)] for _ in range(self.size)]
+        for _attempt in range(max_attempts):
+            # Start with all black cells (sea)
+            self.solution = [[2 for _ in range(self.size)] for _ in range(self.size)]
 
-        # Create some islands
-        self.clues = []
-        self.islands = []
-        self.given_cells = set()
-        placed_islands: list[list[tuple[int, int]]] = []
+            self.clues = []
+            self.islands = []
+            self.given_cells = set()
 
-        for _ in range(self.num_islands):
-            attempts = 0
-            while attempts < 50:
-                # Random position for island
-                row = random.randint(0, self.size - 1)
-                col = random.randint(0, self.size - 1)
+            # Step 1: Place islands strategically
+            placed_islands = self._place_separated_islands_v2()
 
-                # Random island size
-                island_size = random.randint(2, 4)
+            # Step 2: Mark island cells as white in solution
+            for island_cells in placed_islands:
+                for r, c in island_cells:
+                    self.solution[r][c] = 1
 
-                # Try to place island
-                island_cells = self._try_place_island(row, col, island_size, placed_islands)
+            # Step 3: Fix any 2x2 black blocks iteratively
+            self._fix_2x2_blocks()
 
-                if island_cells:
-                    # Mark cells as white
-                    for r, c in island_cells:
-                        self.solution[r][c] = 1
-
-                    # Add clue (use first cell of island)
-                    clue_cell = island_cells[0]
-                    self.clues.append((clue_cell[0], clue_cell[1], island_size))
-                    self.islands.append((clue_cell, island_size))
-                    self.given_cells.add(clue_cell)
-                    placed_islands.append(island_cells)
-                    break
-
-                attempts += 1
+            # Step 4: Validate the solution
+            if self._validate_solution():
+                break
 
         # Initialize player grid
         self.grid = [[0 for _ in range(self.size)] for _ in range(self.size)]
@@ -105,57 +89,196 @@ class NurikabeGame(PuzzleGame):
         self.moves_made = 0
         self.game_started = True
 
-    def _try_place_island(
-        self, start_row: int, start_col: int, size: int, existing_islands: list[list[tuple[int, int]]]
-    ) -> list[tuple[int, int]] | None:
-        """Try to place an island of given size starting from position.
+    def _place_separated_islands_v2(self) -> list[list[tuple[int, int]]]:
+        """Place islands at well-separated positions (simple version)."""
+        placed_islands = []
 
-        Returns:
-            List of cells in the island, or None if placement failed
-        """
-        island = [(start_row, start_col)]
-        candidates = [(start_row, start_col)]
+        # Define island sizes
+        island_sizes = []
+        for i in range(self.num_islands):
+            if i == 0:
+                island_sizes.append(3)  # First island is size 3
+            else:
+                island_sizes.append(2)  # Others are size 2
 
-        while len(island) < size and candidates:
-            # Pick random cell from candidates
-            cell = random.choice(candidates)
-            candidates.remove(cell)
+        # Use simple corner/center positions with good spacing
+        positions = [
+            (0, 0),  # Top-left
+            (0, self.size - 1),  # Top-right
+            (self.size - 1, 0),  # Bottom-left
+            (self.size - 1, self.size - 1),  # Bottom-right
+            (self.size // 2, self.size // 2),  # Center
+        ]
 
-            # Try to expand from this cell
-            row, col = cell
-            neighbors = [(row - 1, col), (row + 1, col), (row, col - 1), (row, col + 1)]
+        for i, size in enumerate(island_sizes):
+            if i >= len(positions):
+                break
 
-            random.shuffle(neighbors)
+            start_row, start_col = positions[i]
+            island_cells = [(start_row, start_col)]
+
+            # Add adjacent cells to form island
+            neighbors = [
+                (start_row - 1, start_col),
+                (start_row + 1, start_col),
+                (start_row, start_col - 1),
+                (start_row, start_col + 1),
+            ]
 
             for nr, nc in neighbors:
+                if len(island_cells) >= size:
+                    break
                 if 0 <= nr < self.size and 0 <= nc < self.size:
-                    if (nr, nc) not in island:
-                        # Check if adding this cell would overlap with existing islands
-                        overlap = False
-                        for existing in existing_islands:
-                            if (nr, nc) in existing:
-                                overlap = True
-                                break
+                    island_cells.append((nr, nc))
 
-                            # Also check if adjacent to existing island
-                            for er, ec in existing:
-                                if abs(nr - er) + abs(nc - ec) == 1:
-                                    overlap = True
-                                    break
+            # Trim to exact size
+            island_cells = island_cells[:size]
 
-                            if overlap:
-                                break
+            if len(island_cells) >= 2:  # Only add if we have at least 2 cells
+                placed_islands.append(island_cells)
+                clue_cell = island_cells[0]
+                self.clues.append((clue_cell[0], clue_cell[1], len(island_cells)))
+                self.islands.append((clue_cell, len(island_cells)))
+                self.given_cells.add(clue_cell)
 
-                        if not overlap:
-                            island.append((nr, nc))
-                            candidates.append((nr, nc))
+        return placed_islands
 
-                            if len(island) >= size:
-                                return island
+    def _fix_2x2_blocks(self) -> None:
+        """Iteratively fix any 2x2 black blocks."""
+        # Track which cells belong to which island and the max sizes
+        island_map = {}  # (row, col) -> island_id
+        island_sizes = {}  # island_id -> (current_size, max_size)
 
-        return island if len(island) == size else None
+        for island_id, (clue_pos, max_size) in enumerate(self.islands):
+            clue_r, clue_c = clue_pos
+            island = self._get_island_from_cell_in_solution(clue_r, clue_c)
+            for r, c in island:
+                island_map[(r, c)] = island_id
+            island_sizes[island_id] = (len(island), max_size)
 
-    def validate_move(self, row: int, col: int, color: str) -> tuple[bool, str]:
+        max_iterations = 100
+        iteration = 0
+
+        while iteration < max_iterations:
+            iteration += 1
+            found_2x2 = False
+
+            # Scan for 2x2 black blocks
+            for row in range(self.size - 1):
+                for col in range(self.size - 1):
+                    if (
+                        self.solution[row][col] == 2
+                        and self.solution[row][col + 1] == 2
+                        and self.solution[row + 1][col] == 2
+                        and self.solution[row + 1][col + 1] == 2
+                    ):
+                        found_2x2 = True
+
+                        # Try to convert one cell to white without merging islands
+                        # Prefer cells that are not part of given islands
+                        candidates = [(row, col), (row, col + 1), (row + 1, col), (row + 1, col + 1)]
+
+                        converted = False
+                        for r, c in candidates:
+                            if (r, c) not in self.given_cells:
+                                # Check neighbor islands
+                                neighbor_islands = set()
+                                for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                                    nr, nc = r + dr, c + dc
+                                    if 0 <= nr < self.size and 0 <= nc < self.size:
+                                        if self.solution[nr][nc] == 1 and (nr, nc) in island_map:
+                                            neighbor_islands.add(island_map[(nr, nc)])
+
+                                # Only convert if it won't merge different islands
+                                # AND won't make an island too large
+                                # AND won't disconnect the black sea
+                                can_add = True
+                                if len(neighbor_islands) == 1:
+                                    island_id = list(neighbor_islands)[0]
+                                    current_size, max_size = island_sizes[island_id]
+                                    if current_size >= max_size:
+                                        can_add = False  # Island is already full
+                                elif len(neighbor_islands) > 1:
+                                    can_add = False  # Would merge islands
+
+                                if can_add:
+                                    # Temporarily convert and check black connectivity
+                                    self.solution[r][c] = 1
+                                    temp_grid = self.grid
+                                    self.grid = self.solution
+                                    black_connected = self._check_black_connected()
+                                    self.grid = temp_grid
+
+                                    if black_connected:
+                                        # Update island map if this extends an existing island
+                                        if len(neighbor_islands) == 1:
+                                            island_id = list(neighbor_islands)[0]
+                                            island_map[(r, c)] = island_id
+                                            current_size, max_size = island_sizes[island_id]
+                                            island_sizes[island_id] = (current_size + 1, max_size)
+                                        converted = True
+                                        break
+                                    else:
+                                        # Revert the change
+                                        self.solution[r][c] = 2
+
+                        # If we couldn't convert safely, this generation attempt failed
+                        # The outer loop will retry with a new random arrangement
+                        if not converted:
+                            # Mark this as invalid by returning early
+                            # The validation will fail and trigger a retry
+                            pass
+
+            if not found_2x2:
+                break
+
+    def _get_island_from_cell_in_solution(self, row: int, col: int) -> set[tuple[int, int]]:
+        """Get all white cells connected to the given cell in solution."""
+        if self.solution[row][col] != 1:
+            return set()
+
+        island = set()
+        queue = [(row, col)]
+        island.add((row, col))
+
+        while queue:
+            r, c = queue.pop(0)
+            for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                nr, nc = r + dr, c + dc
+                if 0 <= nr < self.size and 0 <= nc < self.size:
+                    if (nr, nc) not in island and self.solution[nr][nc] == 1:
+                        island.add((nr, nc))
+                        queue.append((nr, nc))
+
+        return island
+
+    def _validate_solution(self) -> bool:
+        """Validate that the generated solution meets all Nurikabe rules."""
+        # Temporarily use solution as grid for validation
+        temp_grid = self.grid
+        self.grid = self.solution
+
+        # Check that each clue cell has an island of the correct size
+        for clue_row, clue_col, expected_size in self.clues:
+            island_cells = self._get_island_from_cell(clue_row, clue_col)
+            if len(island_cells) != expected_size:
+                self.grid = temp_grid
+                return False
+
+        # Check that black cells are connected
+        if not self._check_black_connected():
+            self.grid = temp_grid
+            return False
+
+        # Check no 2x2 black blocks
+        if self._has_2x2_black():
+            self.grid = temp_grid
+            return False
+
+        self.grid = temp_grid
+        return True
+
+    async def validate_move(self, row: int, col: int, color: str) -> MoveResult:
         """Mark a cell as black or white.
 
         Args:
@@ -164,7 +287,7 @@ class NurikabeGame(PuzzleGame):
             color: 'white' or 'black'
 
         Returns:
-            Tuple of (success, message)
+            MoveResult with success status and message
         """
         # Convert to 0-indexed
         row -= 1
@@ -172,36 +295,40 @@ class NurikabeGame(PuzzleGame):
 
         # Validate coordinates
         if not (0 <= row < self.size and 0 <= col < self.size):
-            return False, f"Invalid coordinates. Use row and column between 1-{self.size}."
+            return MoveResult(success=False, message=f"Invalid coordinates. Use row and column between 1-{self.size}.")
+
+        # Validate color with enum
+        try:
+            color_enum = NurikabeColor(color.lower())
+        except ValueError:
+            return MoveResult(success=False, message="Invalid color. Use 'white', 'black', or 'clear'.")
 
         # Check if this is a clue cell
         for clue_row, clue_col, _size in self.clues:
             if row == clue_row and col == clue_col:
-                return False, "Cannot modify clue cells."
+                return MoveResult(success=False, message="Cannot modify clue cells.")
 
-        color = color.lower()
-
-        if color == "white" or color == "w":
+        if color_enum in (NurikabeColor.WHITE, NurikabeColor.W):
             self.grid[row][col] = 1
             self.moves_made += 1
-            return True, "Cell marked as white (island)."
-        elif color == "black" or color == "b":
+            return MoveResult(success=True, message="Cell marked as white (island).", state_changed=True)
+        elif color_enum in (NurikabeColor.BLACK, NurikabeColor.B):
             self.grid[row][col] = 2
             self.moves_made += 1
-            return True, "Cell marked as black (sea)."
-        elif color == "clear" or color == "c":
+            return MoveResult(success=True, message="Cell marked as black (sea).", state_changed=True)
+        elif color_enum in (NurikabeColor.CLEAR, NurikabeColor.C):
             # Don't clear clue cells
             for clue_row, clue_col, _size in self.clues:
                 if row == clue_row and col == clue_col:
-                    return False, "Cannot clear clue cells."
+                    return MoveResult(success=False, message="Cannot clear clue cells.")
             # Check if cell is already unmarked
             if self.grid[row][col] == 0:
-                return False, "Cell is already unmarked."
+                return MoveResult(success=False, message="Cell is already unmarked.")
             self.grid[row][col] = 0
             self.moves_made += 1
-            return True, "Cell cleared."
-        else:
-            return False, "Invalid color. Use 'white', 'black', or 'clear'."
+            return MoveResult(success=True, message="Cell cleared.", state_changed=True)
+
+        return MoveResult(success=False, message="Invalid color. Use 'white', 'black', or 'clear'.")
 
     def is_complete(self) -> bool:
         """Check if the puzzle is complete and correct."""
@@ -296,7 +423,7 @@ class NurikabeGame(PuzzleGame):
                     return True
         return False
 
-    def get_hint(self) -> tuple[Any, str] | None:
+    async def get_hint(self) -> tuple[Any, str] | None:
         """Get a hint for the next move.
 
         Returns:
@@ -325,6 +452,10 @@ class NurikabeGame(PuzzleGame):
             String representation of the puzzle grid
         """
         lines = []
+
+        lines.append("Nurikabe")
+        lines.append(f"Islands: {len(self.islands)}")
+        lines.append("")
 
         # Header
         header = "  |"
@@ -399,7 +530,7 @@ class NurikabeGame(PuzzleGame):
         Returns:
             String with game stats
         """
-        filled = sum(1 for r in range(self.size) for c in range(self.size) if self.grid[r][c] != 0)
+        marked = sum(1 for r in range(self.size) for c in range(self.size) if self.grid[r][c] != 0)
         total = self.size * self.size
 
-        return f"Moves made: {self.moves_made} | Filled: {filled}/{total} cells | Clues: {len(self.clues)}"
+        return f"Moves made: {self.moves_made} | Marked: {marked}/{total} cells | Islands: {len(self.islands)}"

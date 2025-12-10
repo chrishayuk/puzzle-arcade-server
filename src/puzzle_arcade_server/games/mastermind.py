@@ -4,6 +4,7 @@ import random
 from typing import Any
 
 from ..base.puzzle_game import PuzzleGame
+from ..models import MastermindConfig, MoveResult
 
 
 class MastermindGame(PuzzleGame):
@@ -22,17 +23,11 @@ class MastermindGame(PuzzleGame):
         """
         super().__init__(difficulty)
 
-        # Game configuration based on difficulty
-        config = {
-            "easy": {"code_length": 4, "num_colors": 6, "max_guesses": 10},
-            "medium": {"code_length": 5, "num_colors": 7, "max_guesses": 12},
-            "hard": {"code_length": 6, "num_colors": 8, "max_guesses": 15},
-        }
-        self.config = config.get(difficulty, config["easy"])
-
-        self.code_length = self.config["code_length"]
-        self.num_colors = self.config["num_colors"]
-        self.max_guesses = self.config["max_guesses"]
+        # Use pydantic config based on difficulty
+        self.config = MastermindConfig.from_difficulty(self.difficulty)
+        self.code_length = self.config.code_length
+        self.num_colors = self.config.num_colors
+        self.max_guesses = self.config.max_guesses
 
         # Color representation (1-8 for easy display)
         self.colors = list(range(1, self.num_colors + 1))
@@ -62,7 +57,7 @@ class MastermindGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Code-breaking with logical deduction and feedback"
 
-    def generate_puzzle(self) -> None:
+    async def generate_puzzle(self) -> None:
         """Generate a new Mastermind puzzle."""
         # Generate random secret code
         self.secret_code = [random.choice(self.colors) for _ in range(self.code_length)]
@@ -109,27 +104,29 @@ class MastermindGame(PuzzleGame):
 
         return black_pegs, white_pegs
 
-    def validate_move(self, *guess: int) -> tuple[bool, str]:
+    async def validate_move(self, *guess: int) -> MoveResult:
         """Make a guess.
 
         Args:
             *guess: Variable number of color values (should match code_length)
 
         Returns:
-            Tuple of (success, message)
+            MoveResult with success status and message
         """
         # Check if game is over
         if len(self.guesses) >= self.max_guesses:
-            return False, f"No guesses remaining! The code was: {' '.join(map(str, self.secret_code))}"
+            return MoveResult(
+                success=False, message=f"No guesses remaining! The code was: {' '.join(map(str, self.secret_code))}"
+            )
 
         # Validate guess length
         if len(guess) != self.code_length:
-            return False, f"Guess must be exactly {self.code_length} colors."
+            return MoveResult(success=False, message=f"Guess must be exactly {self.code_length} colors.")
 
         # Validate all colors are in range
         for color in guess:
             if color not in self.colors:
-                return False, f"Invalid color {color}. Use colors 1-{self.num_colors}."
+                return MoveResult(success=False, message=f"Invalid color {color}. Use colors 1-{self.num_colors}.")
 
         # Convert tuple to list
         guess_list = list(guess)
@@ -144,14 +141,21 @@ class MastermindGame(PuzzleGame):
 
         # Check if won
         if black_pegs == self.code_length:
-            return True, f"Congratulations! You cracked the code in {len(self.guesses)} guesses!"
+            return MoveResult(
+                success=True,
+                message=f"Congratulations! You cracked the code in {len(self.guesses)} guesses!",
+                state_changed=True,
+                game_over=True,
+            )
 
         # Check if out of guesses
         if len(self.guesses) >= self.max_guesses:
             code_str = " ".join(map(str, self.secret_code))
-            return False, f"Game over! The code was: {code_str}"
+            return MoveResult(
+                success=True, message=f"Game over! The code was: {code_str}", state_changed=True, game_over=True
+            )
 
-        return True, f"Feedback: {black_pegs} black, {white_pegs} white"
+        return MoveResult(success=True, message=f"Feedback: {black_pegs} black, {white_pegs} white", state_changed=True)
 
     def is_complete(self) -> bool:
         """Check if the puzzle is complete (code cracked)."""
@@ -160,7 +164,7 @@ class MastermindGame(PuzzleGame):
         black_pegs, _white_pegs = self.feedback[-1]
         return black_pegs == self.code_length
 
-    def get_hint(self) -> tuple[Any, str] | None:
+    async def get_hint(self) -> tuple[Any, str] | None:
         """Get a hint for the next move.
 
         Returns:

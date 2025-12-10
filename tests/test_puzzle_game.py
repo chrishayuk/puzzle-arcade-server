@@ -12,19 +12,21 @@ from puzzle_arcade_server.base.puzzle_game import PuzzleGame
 class ConcretePuzzleGame(PuzzleGame):
     """Concrete implementation of PuzzleGame for testing."""
 
-    def generate_puzzle(self) -> None:
+    async def generate_puzzle(self) -> None:
         """Generate a simple test puzzle."""
         pass
 
-    def validate_move(self, *args) -> tuple[bool, str]:
+    async def validate_move(self, *args):
         """Validate a test move."""
-        return True, "Valid move"
+        from puzzle_arcade_server.base.puzzle_game import MoveResult
+
+        return MoveResult(success=True, message="Valid move")
 
     def is_complete(self) -> bool:
         """Check if puzzle is complete."""
         return False
 
-    def get_hint(self) -> tuple[tuple[int, int, int], str] | None:
+    async def get_hint(self) -> tuple[tuple[int, int, int], str] | None:
         """Get a test hint."""
         return ((1, 1, 1), "Test hint")
 
@@ -54,14 +56,14 @@ class ConcretePuzzleGame(PuzzleGame):
 class TestPuzzleGame:
     """Test suite for PuzzleGame base class."""
 
-    def test_initialization(self):
+    async def test_initialization(self):
         """Test game initialization."""
         game = ConcretePuzzleGame("medium")
         assert game.difficulty == "medium"
         assert game.moves_made == 0
         assert game.game_started is False
 
-    def test_get_stats(self):
+    async def test_get_stats(self):
         """Test get_stats method."""
         game = ConcretePuzzleGame("easy")
         stats = game.get_stats()
@@ -72,7 +74,7 @@ class TestPuzzleGame:
         stats = game.get_stats()
         assert stats == "Moves made: 5"
 
-    def test_abstract_methods(self):
+    async def test_abstract_methods(self):
         """Test that PuzzleGame is abstract and requires implementation."""
         game = ConcretePuzzleGame()
 
@@ -87,7 +89,7 @@ class TestPuzzleGame:
         assert hasattr(game, "name")
         assert hasattr(game, "description")
 
-    def test_properties(self):
+    async def test_properties(self):
         """Test name and description properties."""
         game = ConcretePuzzleGame()
         assert game.name == "Test Puzzle"

@@ -4,6 +4,7 @@ import random
 from typing import Any
 
 from ..base.puzzle_game import PuzzleGame
+from ..models import MoveResult, SudokuConfig
 
 
 class SudokuGame(PuzzleGame):
@@ -16,6 +17,7 @@ class SudokuGame(PuzzleGame):
             difficulty: Game difficulty level (easy, medium, hard)
         """
         super().__init__(difficulty)
+        self.config = SudokuConfig.from_difficulty(self.difficulty)
         self.grid = [[0 for _ in range(9)] for _ in range(9)]
         self.solution = [[0 for _ in range(9)] for _ in range(9)]
         self.initial_grid = [[0 for _ in range(9)] for _ in range(9)]
@@ -90,7 +92,7 @@ class SudokuGame(PuzzleGame):
                     return False
         return True
 
-    def generate_puzzle(self) -> None:
+    async def generate_puzzle(self) -> None:
         """Generate a new sudoku puzzle."""
         # Start with an empty grid
         self.grid = [[0 for _ in range(9)] for _ in range(9)]
@@ -109,7 +111,7 @@ class SudokuGame(PuzzleGame):
         self.grid = [row[:] for row in self.solution]
 
         # Remove numbers based on difficulty
-        cells_to_remove = {"easy": 35, "medium": 45, "hard": 55}.get(self.difficulty, 35)
+        cells_to_remove = self.config.cells_to_remove
 
         # Randomly remove numbers
         cells = [(r, c) for r in range(9) for c in range(9)]
@@ -123,7 +125,7 @@ class SudokuGame(PuzzleGame):
         self.moves_made = 0
         self.game_started = True
 
-    def validate_move(self, row: int, col: int, num: int) -> tuple[bool, str]:
+    async def validate_move(self, row: int, col: int, num: int) -> MoveResult:
         """Place a number on the grid.
 
         Args:
@@ -132,7 +134,7 @@ class SudokuGame(PuzzleGame):
             num: Number to place (1-9, or 0 to clear)
 
         Returns:
-            Tuple of (success, message)
+            MoveResult with success status and message
         """
         # Convert to 0-indexed
         row -= 1
@@ -140,20 +142,20 @@ class SudokuGame(PuzzleGame):
 
         # Validate coordinates
         if not (0 <= row < 9 and 0 <= col < 9):
-            return False, "Invalid coordinates. Use row and column between 1-9."
+            return MoveResult(success=False, message="Invalid coordinates. Use row and column between 1-9.")
 
         # Check if this cell is part of the initial puzzle
         if self.initial_grid[row][col] != 0:
-            return False, "Cannot modify initial puzzle cells."
+            return MoveResult(success=False, message="Cannot modify initial puzzle cells.")
 
         # Clear the cell
         if num == 0:
             self.grid[row][col] = 0
-            return True, "Cell cleared."
+            return MoveResult(success=True, message="Cell cleared.", state_changed=True)
 
         # Validate number
         if not (1 <= num <= 9):
-            return False, "Invalid number. Use 1-9 or 0 to clear."
+            return MoveResult(success=False, message="Invalid number. Use 1-9 or 0 to clear.")
 
         # Check if the move is valid
         old_value = self.grid[row][col]
@@ -161,10 +163,10 @@ class SudokuGame(PuzzleGame):
 
         if not self.is_valid_move(row, col, num):
             self.grid[row][col] = old_value
-            return False, "Invalid move! This number conflicts with sudoku rules."
+            return MoveResult(success=False, message="Invalid move! This number conflicts with sudoku rules.")
 
         self.moves_made += 1
-        return True, "Number placed successfully!"
+        return MoveResult(success=True, message="Number placed successfully!", state_changed=True)
 
     def is_complete(self) -> bool:
         """Check if the puzzle is complete and correct."""
@@ -176,7 +178,7 @@ class SudokuGame(PuzzleGame):
                     return False
         return True
 
-    def get_hint(self) -> tuple[Any, str] | None:
+    async def get_hint(self) -> tuple[Any, str] | None:
         """Get a hint for the next move.
 
         Returns:

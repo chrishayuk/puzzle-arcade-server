@@ -4,6 +4,7 @@ import random
 from typing import Any
 
 from ..base.puzzle_game import PuzzleGame
+from ..models import Cage, KillerSudokuConfig, MoveResult
 
 
 class KillerSudokuGame(PuzzleGame):
@@ -21,14 +22,14 @@ class KillerSudokuGame(PuzzleGame):
         """
         super().__init__(difficulty)
 
+        self.config = KillerSudokuConfig.from_difficulty(self.difficulty)
         self.size = 9
         self.grid = [[0 for _ in range(9)] for _ in range(9)]
         self.solution = [[0 for _ in range(9)] for _ in range(9)]
         self.initial_grid = [[0 for _ in range(9)] for _ in range(9)]
 
-        # Cages: list of (cells, sum_target)
-        # cells = [(row, col), ...]
-        self.cages: list[tuple[list[tuple[int, int]], int]] = []
+        # Cages: list of Cage objects
+        self.cages: list[Cage] = []
 
     @property
     def name(self) -> str:
@@ -112,14 +113,14 @@ class KillerSudokuGame(PuzzleGame):
             True if cage constraints are satisfied or could be satisfied
         """
         # Find which cage contains this cell
-        for cells, target_sum in self.cages:
-            if (row, col) not in cells:
+        for cage in self.cages:
+            if (row, col) not in cage.cells:
                 continue
 
             # Get all values in the cage
             cage_values = []
             filled_count = 0
-            for r, c in cells:
+            for r, c in cage.cells:
                 val = grid[r][c]
                 if val != 0:
                     cage_values.append(val)
@@ -130,13 +131,13 @@ class KillerSudokuGame(PuzzleGame):
                 return False
 
             # If cage is not fully filled, check if we haven't exceeded target
-            if filled_count < len(cells):
+            if filled_count < len(cage.cells):
                 current_sum = sum(cage_values)
-                if current_sum >= target_sum:
+                if current_sum >= cage.target:
                     return False
             else:
                 # All cells filled - check if sum matches target
-                if sum(cage_values) != target_sum:
+                if sum(cage_values) != cage.target:
                     return False
 
         return True
@@ -184,13 +185,14 @@ class KillerSudokuGame(PuzzleGame):
                         nr, nc = r + dr, c + dc
                         if 0 <= nr < 9 and 0 <= nc < 9:
                             # Find cage containing this cell
-                            for cage_idx, (cage_cells, _sum) in enumerate(self.cages):
-                                if (nr, nc) in cage_cells:
+                            for cage_idx, cage in enumerate(self.cages):
+                                if (nr, nc) in cage.cells:
                                     # Merge this cell into the adjacent cage
-                                    cage_cells.append((r, c))
+                                    new_cells = list(cage.cells)
+                                    new_cells.append((r, c))
                                     # Recalculate sum
-                                    new_sum = sum(self.solution[r][c] for r, c in cage_cells)
-                                    self.cages[cage_idx] = (cage_cells, new_sum)
+                                    new_sum = sum(self.solution[r][c] for r, c in new_cells)
+                                    self.cages[cage_idx] = Cage(cells=new_cells, operation=None, target=new_sum)
                                     merged = True
                                     break
                         if merged:
@@ -199,13 +201,13 @@ class KillerSudokuGame(PuzzleGame):
                     if not merged:
                         # Couldn't merge, just add as size-1 cage
                         target_sum = self.solution[r][c]
-                        self.cages.append((cells, target_sum))
+                        self.cages.append(Cage(cells=cells, operation=None, target=target_sum))
                 else:
                     # Calculate target sum from solution
                     target_sum = sum(self.solution[r][c] for r, c in cells)
-                    self.cages.append((cells, target_sum))
+                    self.cages.append(Cage(cells=cells, operation=None, target=target_sum))
 
-    def generate_puzzle(self) -> None:
+    async def generate_puzzle(self) -> None:
         """Generate a new Killer Sudoku puzzle."""
         # Generate a valid Latin square as solution
         self.grid = [[0 for _ in range(9)] for _ in range(9)]
@@ -233,7 +235,7 @@ class KillerSudokuGame(PuzzleGame):
         self.moves_made = 0
         self.game_started = True
 
-    def validate_move(self, row: int, col: int, num: int) -> tuple[bool, str]:
+    async def validate_move(self, row: int, col: int, num: int) -> MoveResult:
         """Place a number on the grid.
 
         Args:
@@ -242,7 +244,7 @@ class KillerSudokuGame(PuzzleGame):
             num: Number to place (1-9, or 0 to clear)
 
         Returns:
-            Tuple of (success, message)
+            MoveResult indicating success or failure
         """
         # Convert to 0-indexed
         row -= 1
@@ -250,16 +252,16 @@ class KillerSudokuGame(PuzzleGame):
 
         # Validate coordinates
         if not (0 <= row < 9 and 0 <= col < 9):
-            return False, "Invalid coordinates. Use row and column between 1-9."
+            return MoveResult(success=False, message="Invalid coordinates. Use row and column between 1-9.")
 
         # Clear the cell
         if num == 0:
             self.grid[row][col] = 0
-            return True, "Cell cleared."
+            return MoveResult(success=True, message="Cell cleared.", state_changed=True)
 
         # Validate number
         if not (1 <= num <= 9):
-            return False, "Invalid number. Use 1-9 or 0 to clear."
+            return MoveResult(success=False, message="Invalid number. Use 1-9 or 0 to clear.")
 
         # Check if the move is valid
         old_value = self.grid[row][col]
@@ -267,10 +269,12 @@ class KillerSudokuGame(PuzzleGame):
 
         if not self.is_valid_move(row, col, num):
             self.grid[row][col] = old_value
-            return False, "Invalid move! This number already exists in the row, column, or box."
+            return MoveResult(
+                success=False, message="Invalid move! This number already exists in the row, column, or box."
+            )
 
         self.moves_made += 1
-        return True, "Number placed successfully!"
+        return MoveResult(success=True, message="Number placed successfully!", state_changed=True)
 
     def is_complete(self) -> bool:
         """Check if the puzzle is complete and correct."""
@@ -300,18 +304,18 @@ class KillerSudokuGame(PuzzleGame):
                     return False
 
         # Check all cages
-        for cells, target_sum in self.cages:
-            cage_values = [self.grid[r][c] for r, c in cells]
+        for cage in self.cages:
+            cage_values = [self.grid[r][c] for r, c in cage.cells]
             # Check for duplicates
             if len(cage_values) != len(set(cage_values)):
                 return False
             # Check sum
-            if sum(cage_values) != target_sum:
+            if sum(cage_values) != cage.target:
                 return False
 
         return True
 
-    def get_hint(self) -> tuple[Any, str] | None:
+    async def get_hint(self) -> tuple[Any, str] | None:
         """Get a hint for the next move.
 
         Returns:
@@ -336,9 +340,9 @@ class KillerSudokuGame(PuzzleGame):
 
         # Create a cage ID map
         cage_map = {}
-        for cage_id, (cells, target_sum) in enumerate(self.cages):
-            for r, c in cells:
-                cage_map[(r, c)] = (cage_id, target_sum)
+        for cage_id, cage in enumerate(self.cages):
+            for r, c in cage.cells:
+                cage_map[(r, c)] = (cage_id, cage.target)
 
         # Header
         lines.append("  | 1 2 3 | 4 5 6 | 7 8 9 |")
@@ -358,7 +362,7 @@ class KillerSudokuGame(PuzzleGame):
                     # Show cage sum in top-left cell of each cage
                     cage_id, target_sum = cage_map.get((row, col), (None, None))
                     if cage_id is not None:
-                        cage_cells = self.cages[cage_id][0]
+                        cage_cells = self.cages[cage_id].cells
                         if (row, col) == min(cage_cells):
                             line += f" {target_sum:2d}" if target_sum < 100 else f"{target_sum}"
                         else:
@@ -374,11 +378,11 @@ class KillerSudokuGame(PuzzleGame):
 
         # Show cage info
         lines.append("\nCages (sum targets):")
-        for _i, (cells, target_sum) in enumerate(self.cages[:10]):  # Show first 10
-            cells_str = ", ".join(f"({r + 1},{c + 1})" for r, c in sorted(cells)[:3])
-            if len(cells) > 3:
+        for _i, cage in enumerate(self.cages[:10]):  # Show first 10
+            cells_str = ", ".join(f"({r + 1},{c + 1})" for r, c in sorted(cage.cells)[:3])
+            if len(cage.cells) > 3:
                 cells_str += "..."
-            lines.append(f"  {target_sum}: {cells_str}")
+            lines.append(f"  {cage.target}: {cells_str}")
         if len(self.cages) > 10:
             lines.append(f"  ... and {len(self.cages) - 10} more cages")
 

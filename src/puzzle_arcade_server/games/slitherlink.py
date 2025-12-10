@@ -3,7 +3,10 @@
 import random
 from typing import Any
 
+from puzzle_arcade_server.models.enums import DifficultyLevel
+
 from ..base.puzzle_game import PuzzleGame
+from ..models import MoveResult, SlitherlinkConfig
 
 
 class SlitherlinkGame(PuzzleGame):
@@ -22,8 +25,9 @@ class SlitherlinkGame(PuzzleGame):
         """
         super().__init__(difficulty)
 
-        # Grid size based on difficulty (cells, not dots)
-        self.size = {"easy": 5, "medium": 7, "hard": 10}.get(difficulty, 5)
+        # Grid configuration
+        self.config = SlitherlinkConfig.from_difficulty(self.difficulty)
+        self.size = self.config.size
 
         # Clue grid: -1 = no clue, 0-3 = number of edges
         self.clues = [[-1 for _ in range(self.size)] for _ in range(self.size)]
@@ -90,16 +94,19 @@ class SlitherlinkGame(PuzzleGame):
             count += 1
         return count
 
-    def generate_puzzle(self) -> None:
+    async def generate_puzzle(self) -> None:
         """Generate a new Slitherlink puzzle."""
         # Generate solution loop
         self._generate_simple_loop()
 
         # Generate clues based on solution
         # Place clues based on difficulty
-        num_clues = {"easy": self.size * 2, "medium": self.size * 3, "hard": self.size * 4}.get(
-            self.difficulty, self.size * 2
-        )
+        num_clues_map = {
+            DifficultyLevel.EASY: self.size * 2,
+            DifficultyLevel.MEDIUM: self.size * 3,
+            DifficultyLevel.HARD: self.size * 4,
+        }
+        num_clues = num_clues_map[self.difficulty]
 
         placed = 0
         attempts = 0
@@ -124,7 +131,7 @@ class SlitherlinkGame(PuzzleGame):
         self.moves_made = 0
         self.game_started = True
 
-    def validate_move(self, edge_type: str, row: int, col: int, state: int) -> tuple[bool, str]:
+    async def validate_move(self, edge_type: str, row: int, col: int, state: int) -> MoveResult:
         """Set an edge state.
 
         Args:
@@ -134,7 +141,7 @@ class SlitherlinkGame(PuzzleGame):
             state: 0=unknown, 1=line, 2=no line (X)
 
         Returns:
-            Tuple of (success, message)
+            MoveResult with success status and message
         """
         # Convert to 0-indexed
         row -= 1
@@ -142,26 +149,34 @@ class SlitherlinkGame(PuzzleGame):
 
         # Validate state
         if state not in [0, 1, 2]:
-            return False, "Invalid state. Use 0=clear, 1=line, 2=X"
+            return MoveResult(success=False, message="Invalid state. Use 0=clear, 1=line, 2=X")
 
         # Validate edge type and coordinates
         if edge_type.lower() == "h":
             if not (0 <= row <= self.size and 0 <= col < self.size):
-                return False, f"Invalid horizontal edge. Row: 1-{self.size + 1}, Col: 1-{self.size}"
+                return MoveResult(
+                    success=False, message=f"Invalid horizontal edge. Row: 1-{self.size + 1}, Col: 1-{self.size}"
+                )
             self.h_edges[row][col] = state
             edge_name = "horizontal"
         elif edge_type.lower() == "v":
             if not (0 <= row < self.size and 0 <= col <= self.size):
-                return False, f"Invalid vertical edge. Row: 1-{self.size}, Col: 1-{self.size + 1}"
+                return MoveResult(
+                    success=False, message=f"Invalid vertical edge. Row: 1-{self.size}, Col: 1-{self.size + 1}"
+                )
             self.v_edges[row][col] = state
             edge_name = "vertical"
         else:
-            return False, "Invalid edge type. Use 'h' or 'v'"
+            return MoveResult(success=False, message="Invalid edge type. Use 'h' or 'v'")
 
         self.moves_made += 1
 
         state_name = {0: "cleared", 1: "set to line", 2: "marked as X"}[state]
-        return True, f"{edge_name.capitalize()} edge ({row + 1},{col + 1}) {state_name}"
+        return MoveResult(
+            success=True,
+            message=f"{edge_name.capitalize()} edge ({row + 1},{col + 1}) {state_name}",
+            state_changed=True,
+        )
 
     def is_complete(self) -> bool:
         """Check if the puzzle is complete and correct."""
@@ -213,7 +228,7 @@ class SlitherlinkGame(PuzzleGame):
 
         return True
 
-    def get_hint(self) -> tuple[Any, str] | None:
+    async def get_hint(self) -> tuple[Any, str] | None:
         """Get a hint for the next move.
 
         Returns:

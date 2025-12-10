@@ -11,22 +11,22 @@ from puzzle_arcade_server.games.futoshiki import FutoshikiGame
 class TestFutoshikiGame:
     """Test suite for FutoshikiGame class."""
 
-    def test_initialization(self):
+    async def test_initialization(self):
         """Test game initialization."""
         game = FutoshikiGame("easy")
         assert game.difficulty == "easy"
         assert game.size == 4
 
-    def test_difficulty_sizes(self):
+    async def test_difficulty_sizes(self):
         """Test different difficulty sizes."""
         for difficulty, expected_size in [("easy", 4), ("medium", 5), ("hard", 6)]:
             game = FutoshikiGame(difficulty)
             assert game.size == expected_size
 
-    def test_generate_puzzle(self):
+    async def test_generate_puzzle(self):
         """Test puzzle generation."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Check inequalities were generated
         assert len(game.inequalities) > 0
@@ -35,54 +35,57 @@ class TestFutoshikiGame:
         empty_count = sum(1 for row in game.grid for cell in row if cell == 0)
         assert empty_count > 0
 
-    def test_place_number(self):
+    async def test_place_number(self):
         """Test placing a number."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Find empty cell
         for r in range(game.size):
             for c in range(game.size):
                 if game.grid[r][c] == 0:
                     correct_num = game.solution[r][c]
-                    success, msg = game.validate_move(r + 1, c + 1, correct_num)
+                    result = await game.validate_move(r + 1, c + 1, correct_num)
+                    success, _msg = result.success, result.message
                     assert success
                     assert game.grid[r][c] == correct_num
                     return
 
-    def test_clear_cell(self):
+    async def test_clear_cell(self):
         """Test clearing a cell."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Find empty, place, clear
         for r in range(game.size):
             for c in range(game.size):
                 if game.grid[r][c] == 0 and game.initial_grid[r][c] == 0:
-                    game.validate_move(r + 1, c + 1, game.solution[r][c])
-                    success, msg = game.validate_move(r + 1, c + 1, 0)
+                    await game.validate_move(r + 1, c + 1, game.solution[r][c])
+                    result = await game.validate_move(r + 1, c + 1, 0)
+                    success, _msg = result.success, result.message
                     assert success
                     assert game.grid[r][c] == 0
                     return
 
-    def test_cannot_modify_initial_cells(self):
+    async def test_cannot_modify_initial_cells(self):
         """Test that initial cells cannot be modified."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Find initial cell
         for r in range(game.size):
             for c in range(game.size):
                 if game.initial_grid[r][c] != 0:
-                    success, msg = game.validate_move(r + 1, c + 1, 1)
+                    result = await game.validate_move(r + 1, c + 1, 1)
+                    success, msg = result.success, result.message
                     assert not success
                     assert "Cannot modify" in msg
                     return
 
-    def test_is_complete(self):
+    async def test_is_complete(self):
         """Test completion check."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         assert not game.is_complete()
 
@@ -90,12 +93,12 @@ class TestFutoshikiGame:
         game.grid = [row[:] for row in game.solution]
         assert game.is_complete()
 
-    def test_get_hint(self):
+    async def test_get_hint(self):
         """Test hint generation."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
-        hint = game.get_hint()
+        hint = await game.get_hint()
         if hint:
             hint_data, hint_message = hint
             row, col, num = hint_data
@@ -103,70 +106,72 @@ class TestFutoshikiGame:
             assert 1 <= col <= game.size
             assert 1 <= num <= game.size
 
-    def test_render_grid(self):
+    async def test_render_grid(self):
         """Test grid rendering."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         grid_str = game.render_grid()
         assert isinstance(grid_str, str)
         assert "|" in grid_str
 
-    def test_name_and_description(self):
+    async def test_name_and_description(self):
         """Test name and description."""
         game = FutoshikiGame("easy")
         assert game.name == "Futoshiki"
         assert len(game.description) > 0
 
-    def test_get_rules(self):
+    async def test_get_rules(self):
         """Test rules retrieval."""
         game = FutoshikiGame("easy")
         rules = game.get_rules()
         assert "FUTOSHIKI" in rules.upper()
         assert "inequality" in rules.lower()
 
-    def test_get_commands(self):
+    async def test_get_commands(self):
         """Test commands retrieval."""
         game = FutoshikiGame("easy")
         commands = game.get_commands()
         assert "place" in commands.lower()
 
-    def test_invalid_coordinates(self):
+    async def test_invalid_coordinates(self):
         """Test invalid coordinates."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
-        success, msg = game.validate_move(99, 99, 1)
+        result = await game.validate_move(99, 99, 1)
+        success, msg = result.success, result.message
         assert not success
         assert "Invalid coordinates" in msg
 
-    def test_invalid_number(self):
+    async def test_invalid_number(self):
         """Test invalid number."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Find an empty cell
         for r in range(game.size):
             for c in range(game.size):
                 if game.grid[r][c] == 0:
-                    success, msg = game.validate_move(r + 1, c + 1, 99)
+                    result = await game.validate_move(r + 1, c + 1, 99)
+                    success, msg = result.success, result.message
                     assert not success
                     assert "Invalid number" in msg
                     return
 
-    def test_solve_method(self):
+    async def test_solve_method(self):
         """Test the solve method."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Solution should exist
         assert game.solution is not None
         assert all(1 <= cell <= game.size for row in game.solution for cell in row)
 
-    def test_generate_inequalities(self):
+    async def test_generate_inequalities(self):
         """Test inequality generation."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Inequalities should have been generated
         assert len(game.inequalities) > 0
@@ -181,10 +186,10 @@ class TestFutoshikiGame:
             # First cell should be greater than second in solution
             assert game.solution[r1][c1] > game.solution[r2][c2]
 
-    def test_solution_satisfies_inequalities(self):
+    async def test_solution_satisfies_inequalities(self):
         """Test that solution satisfies all inequalities."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Check that all inequalities are satisfied in the solution
         for (r1, c1), (r2, c2) in game.inequalities:
@@ -194,19 +199,19 @@ class TestFutoshikiGame:
             # r1 should be > r2 as per the inequality definition
             assert val1 > val2, f"Inequality violated: ({r1},{c1})={val1} should be > ({r2},{c2})={val2}"
 
-    def test_get_stats(self):
+    async def test_get_stats(self):
         """Test stats retrieval."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         stats = game.get_stats()
         assert "Moves made" in stats
         assert "Inequalities" in stats
 
-    def test_is_valid_move_with_grid_param(self):
+    async def test_is_valid_move_with_grid_param(self):
         """Test is_valid_move with explicit grid parameter."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Create a test grid
         test_grid = [[0 for _ in range(game.size)] for _ in range(game.size)]
@@ -218,10 +223,10 @@ class TestFutoshikiGame:
         # Try placing same number in same column
         assert not game.is_valid_move(1, 0, 1, test_grid)
 
-    def test_inequality_constraint_validation(self):
+    async def test_inequality_constraint_validation(self):
         """Test inequality constraint checking in is_valid_move."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Find an inequality and test it
         if len(game.inequalities) > 0:
@@ -254,10 +259,10 @@ class TestFutoshikiGame:
             if valid_value:
                 assert game.is_valid_move(r2, c2, valid_value, game.grid)
 
-    def test_render_grid_with_inequalities(self):
+    async def test_render_grid_with_inequalities(self):
         """Test that rendering includes inequality symbols."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         rendered = game.render_grid()
 
@@ -269,10 +274,10 @@ class TestFutoshikiGame:
             # At least one inequality symbol should be present
             assert any(sym in rendered for sym in [">", "<", "^", "v"])
 
-    def test_solve_backtracking(self):
+    async def test_solve_backtracking(self):
         """Test the solve method with backtracking."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Create a partially filled grid
         test_grid = [[0 for _ in range(game.size)] for _ in range(game.size)]
@@ -286,10 +291,10 @@ class TestFutoshikiGame:
         # Should either solve it or determine it's impossible
         assert isinstance(result, bool)
 
-    def test_inequality_direction_rendering(self):
+    async def test_inequality_direction_rendering(self):
         """Test rendering of different inequality directions."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Manually create some inequalities to test rendering
         if game.size >= 2:
@@ -305,10 +310,10 @@ class TestFutoshikiGame:
             # Should have v or ^ symbol for vertical
             assert "v" in rendered or "^" in rendered
 
-    def test_is_valid_move_inequality_both_directions(self):
+    async def test_is_valid_move_inequality_both_directions(self):
         """Test inequality validation in both directions."""
         game = FutoshikiGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Create a test scenario with inequality
         if len(game.inequalities) > 0:

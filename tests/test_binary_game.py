@@ -11,22 +11,22 @@ from puzzle_arcade_server.games.binary import BinaryPuzzleGame
 class TestBinaryPuzzleGame:
     """Test suite for BinaryPuzzleGame class."""
 
-    def test_initialization(self):
+    async def test_initialization(self):
         """Test game initialization."""
         game = BinaryPuzzleGame("easy")
         assert game.difficulty == "easy"
         assert game.size == 6
 
-    def test_difficulty_sizes(self):
+    async def test_difficulty_sizes(self):
         """Test different difficulty sizes."""
         for difficulty, expected_size in [("easy", 6), ("medium", 8), ("hard", 10)]:
             game = BinaryPuzzleGame(difficulty)
             assert game.size == expected_size
 
-    def test_generate_puzzle(self):
+    async def test_generate_puzzle(self):
         """Test puzzle generation."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Solution should only contain 0s and 1s
         assert all(cell in [0, 1] for row in game.solution for cell in row)
@@ -35,10 +35,10 @@ class TestBinaryPuzzleGame:
         empty_count = sum(1 for row in game.grid for cell in row if cell == -1)
         assert empty_count > 0
 
-    def test_place_number(self):
+    async def test_place_number(self):
         """Test placing 0 or 1."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Find empty cell and try to place a valid value
         # Note: The solution value might not always be valid due to current grid state
@@ -48,7 +48,8 @@ class TestBinaryPuzzleGame:
                 if game.grid[r][c] == -1:
                     # Try both 0 and 1 to find a valid move
                     for val in [0, 1]:
-                        success, msg = game.validate_move(r + 1, c + 1, val)
+                        result = await game.validate_move(r + 1, c + 1, val)
+                        success, _msg = result.success, result.message
                         if success:
                             assert game.grid[r][c] == val
                             placed = True
@@ -57,39 +58,41 @@ class TestBinaryPuzzleGame:
         # Should have placed at least one value
         assert placed
 
-    def test_clear_cell(self):
+    async def test_clear_cell(self):
         """Test clearing a cell."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Find empty, place, then clear
         for r in range(game.size):
             for c in range(game.size):
                 if game.grid[r][c] == -1 and game.initial_grid[r][c] == -1:
-                    game.validate_move(r + 1, c + 1, 0)
-                    success, msg = game.validate_move(r + 1, c + 1, -1)
+                    await game.validate_move(r + 1, c + 1, 0)
+                    result = await game.validate_move(r + 1, c + 1, -1)
+                    success, _msg = result.success, result.message
                     assert success
                     assert game.grid[r][c] == -1
                     return
 
-    def test_cannot_modify_initial_cells(self):
+    async def test_cannot_modify_initial_cells(self):
         """Test that initial cells cannot be modified."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Find initial cell
         for r in range(game.size):
             for c in range(game.size):
                 if game.initial_grid[r][c] != -1:
-                    success, msg = game.validate_move(r + 1, c + 1, 0)
+                    result = await game.validate_move(r + 1, c + 1, 0)
+                    success, msg = result.success, result.message
                     assert not success
                     assert "Cannot modify" in msg
                     return
 
-    def test_is_complete(self):
+    async def test_is_complete(self):
         """Test completion check."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         assert not game.is_complete()
 
@@ -97,12 +100,12 @@ class TestBinaryPuzzleGame:
         game.grid = [row[:] for row in game.solution]
         assert game.is_complete()
 
-    def test_get_hint(self):
+    async def test_get_hint(self):
         """Test hint generation."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
-        hint = game.get_hint()
+        hint = await game.get_hint()
         if hint:
             hint_data, hint_message = hint
             row, col, val = hint_data
@@ -110,51 +113,52 @@ class TestBinaryPuzzleGame:
             assert 1 <= col <= game.size
             assert val in [0, 1]
 
-    def test_render_grid(self):
+    async def test_render_grid(self):
         """Test grid rendering."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         grid_str = game.render_grid()
         assert isinstance(grid_str, str)
         assert "|" in grid_str
 
-    def test_name_and_description(self):
+    async def test_name_and_description(self):
         """Test name and description."""
         game = BinaryPuzzleGame("easy")
         assert game.name == "Binary Puzzle"
         assert len(game.description) > 0
 
-    def test_get_rules(self):
+    async def test_get_rules(self):
         """Test rules retrieval."""
         game = BinaryPuzzleGame("easy")
         rules = game.get_rules()
         assert "BINARY" in rules.upper()
 
-    def test_get_commands(self):
+    async def test_get_commands(self):
         """Test commands retrieval."""
         game = BinaryPuzzleGame("easy")
         commands = game.get_commands()
         assert "place" in commands.lower()
 
-    def test_invalid_number(self):
+    async def test_invalid_number(self):
         """Test invalid number handling."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Find empty cell
         for r in range(game.size):
             for c in range(game.size):
                 if game.grid[r][c] == -1 and game.initial_grid[r][c] == -1:
-                    success, msg = game.validate_move(r + 1, c + 1, 5)
+                    result = await game.validate_move(r + 1, c + 1, 5)
+                    success, msg = result.success, result.message
                     assert not success
                     assert "Invalid number" in msg
                     return
 
-    def test_check_no_three_consecutive(self):
+    async def test_check_no_three_consecutive(self):
         """Test three consecutive check."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Try to create three consecutive (should fail)
         # Find three consecutive empty cells in a row
@@ -164,9 +168,10 @@ class TestBinaryPuzzleGame:
                 # Try to place same value three times
                 for i in range(3):
                     if i < 2:
-                        game.validate_move(r + 1, empty_cols[i] + 1, 0)
+                        await game.validate_move(r + 1, empty_cols[i] + 1, 0)
                 # Third one should fail
-                success, msg = game.validate_move(r + 1, empty_cols[2] + 1, 0)
+                result = await game.validate_move(r + 1, empty_cols[2] + 1, 0)
+                success, msg = result.success, result.message
                 if not success and "three consecutive" in msg.lower():
                     assert True
                     return
@@ -174,10 +179,10 @@ class TestBinaryPuzzleGame:
                 for i in range(3):
                     game.grid[r][empty_cols[i]] = -1
 
-    def test_check_equal_counts(self):
+    async def test_check_equal_counts(self):
         """Test equal count checking."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Try to exceed count limit
         for r in range(game.size):
@@ -190,47 +195,49 @@ class TestBinaryPuzzleGame:
                 # Find empty cells and try to add 0s until we exceed
                 for c in range(game.size):
                     if game.grid[r][c] == -1 and game.initial_grid[r][c] == -1:
-                        game.validate_move(r + 1, c + 1, 0)
+                        await game.validate_move(r + 1, c + 1, 0)
                         count_0 += 1
                         if count_0 >= game.size // 2:
                             # Try one more, should fail
                             for c2 in range(c + 1, game.size):
                                 if game.grid[r][c2] == -1 and game.initial_grid[r][c2] == -1:
-                                    success, msg = game.validate_move(r + 1, c2 + 1, 0)
+                                    result = await game.validate_move(r + 1, c2 + 1, 0)
+                                    success, _msg = result.success, result.message
                                     if not success:
                                         return
                             return
 
-    def test_get_stats(self):
+    async def test_get_stats(self):
         """Test stats retrieval."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         stats = game.get_stats()
         assert "Moves made" in stats
         assert "Empty cells" in stats
         assert "Grid size" in stats
 
-    def test_clear_with_value_2(self):
+    async def test_clear_with_value_2(self):
         """Test clearing with value 2."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Find empty cell and place
         for r in range(game.size):
             for c in range(game.size):
                 if game.grid[r][c] == -1 and game.initial_grid[r][c] == -1:
-                    game.validate_move(r + 1, c + 1, 1)
+                    await game.validate_move(r + 1, c + 1, 1)
                     # Clear with 2
-                    success, msg = game.validate_move(r + 1, c + 1, 2)
+                    result = await game.validate_move(r + 1, c + 1, 2)
+                    success, _msg = result.success, result.message
                     assert success
                     assert game.grid[r][c] == -1
                     return
 
-    def test_solution_validation(self):
+    async def test_solution_validation(self):
         """Test that solution is valid."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Solution should have equal 0s and 1s in each row
         for row in game.solution:
@@ -244,10 +251,10 @@ class TestBinaryPuzzleGame:
         # For now, just verify the solution exists and has valid structure
         assert all(cell in [0, 1] for row in game.solution for cell in row)
 
-    def test_check_no_three_in_columns(self):
+    async def test_check_no_three_in_columns(self):
         """Test three consecutive check in columns."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Solution should not have three consecutive in columns
         for col in range(game.size):
@@ -261,10 +268,10 @@ class TestBinaryPuzzleGame:
         # Just verify solution is valid
         assert game.solution is not None
 
-    def test_check_equal_counts_incomplete(self):
+    async def test_check_equal_counts_incomplete(self):
         """Test equal count checking with incomplete sequences."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Test incomplete sequence
         incomplete = [-1, 0, 1, -1, -1, -1]
@@ -278,7 +285,7 @@ class TestBinaryPuzzleGame:
         valid = [0, 0, 0, 1, 1, 1]
         assert game._check_equal_counts(valid)
 
-    def test_check_no_three_consecutive_method(self):
+    async def test_check_no_three_consecutive_method(self):
         """Test _check_no_three_consecutive method directly."""
         game = BinaryPuzzleGame("easy")
 
@@ -303,16 +310,17 @@ class TestBinaryPuzzleGame:
         test_grid3[0][2] = 0
         assert game._check_no_three_consecutive(test_grid3)
 
-    def test_invalid_coordinates(self):
+    async def test_invalid_coordinates(self):
         """Test invalid coordinate handling."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
-        success, msg = game.validate_move(99, 99, 0)
+        result = await game.validate_move(99, 99, 0)
+        success, msg = result.success, result.message
         assert not success
         assert "Invalid coordinates" in msg
 
-    def test_generate_valid_solution(self):
+    async def test_generate_valid_solution(self):
         """Test the _generate_valid_solution backtracking method."""
         game = BinaryPuzzleGame("easy")
 
@@ -328,10 +336,10 @@ class TestBinaryPuzzleGame:
         # Should return True if it can solve, or False if not
         assert isinstance(result, bool)
 
-    def test_equal_counts_complete_sequence(self):
+    async def test_equal_counts_complete_sequence(self):
         """Test equal counts with complete sequences."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Test valid complete sequence
         valid_complete = [0, 0, 0, 1, 1, 1]
@@ -341,10 +349,10 @@ class TestBinaryPuzzleGame:
         invalid_complete = [0, 0, 0, 0, 1, 1]
         assert not game._check_equal_counts(invalid_complete)
 
-    def test_render_grid_large(self):
+    async def test_render_grid_large(self):
         """Test grid rendering with larger sizes."""
         game = BinaryPuzzleGame("medium")  # 8x8
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         rendered = game.render_grid()
         assert isinstance(rendered, str)
@@ -353,27 +361,28 @@ class TestBinaryPuzzleGame:
         # Should handle double-digit row numbers
         assert "8" in rendered or " 8|" in rendered
 
-    def test_validate_move_edge_cases(self):
+    async def test_validate_move_edge_cases(self):
         """Test validate_move with various edge cases."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Test clearing with -1
         for r in range(game.size):
             for c in range(game.size):
                 if game.initial_grid[r][c] == -1:
                     # Place a value
-                    game.validate_move(r + 1, c + 1, 0)
+                    await game.validate_move(r + 1, c + 1, 0)
                     # Clear with -1
-                    success, msg = game.validate_move(r + 1, c + 1, -1)
+                    result = await game.validate_move(r + 1, c + 1, -1)
+                    success, _msg = result.success, result.message
                     assert success
                     assert game.grid[r][c] == -1
                     return
 
-    def test_column_count_validation(self):
+    async def test_column_count_validation(self):
         """Test that column count limits are enforced."""
         game = BinaryPuzzleGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Find a column with room for more 0s
         for col in range(game.size):
@@ -385,7 +394,8 @@ class TestBinaryPuzzleGame:
                 for row in range(game.size):
                     if game.grid[row][col] == -1 and game.initial_grid[row][col] == -1:
                         [r[:] for r in game.grid]
-                        success, msg = game.validate_move(row + 1, col + 1, 0)
+                        result = await game.validate_move(row + 1, col + 1, 0)
+                        success, msg = result.success, result.message
                         if not success and "column" in msg.lower():
                             # Found the case where we exceed column limit
                             return

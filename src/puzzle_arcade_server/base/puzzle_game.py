@@ -3,6 +3,8 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+from ..models import DifficultyLevel, MoveResult
+
 
 class PuzzleGame(ABC):
     """Base class for all puzzle games in the arcade.
@@ -12,34 +14,42 @@ class PuzzleGame(ABC):
     The solving happens client-side (LLMs with MCP solver access).
     """
 
-    def __init__(self, difficulty: str = "easy"):
+    def __init__(self, difficulty: DifficultyLevel | str = DifficultyLevel.EASY):
         """Initialize a new puzzle game.
 
         Args:
             difficulty: Game difficulty level (easy, medium, hard)
         """
-        self.difficulty = difficulty
+        # Convert string to enum if needed (for backwards compatibility)
+        if isinstance(difficulty, str):
+            self.difficulty = DifficultyLevel(difficulty)
+        else:
+            self.difficulty = difficulty
+
         self.moves_made = 0
         self.game_started = False
 
     @abstractmethod
-    def generate_puzzle(self) -> None:
+    async def generate_puzzle(self) -> None:
         """Generate a new puzzle with a unique solution.
 
         This should create the puzzle grid, store the solution,
         and prepare the initial state for play.
+
+        This is async to allow for non-blocking generation of complex puzzles.
         """
         pass
 
     @abstractmethod
-    def validate_move(self, *args: Any) -> tuple[bool, str]:
+    async def validate_move(self, *args: Any, **kwargs: Any) -> MoveResult:
         """Validate a player's move.
 
         Args:
             *args: Move parameters (game-specific)
+            **kwargs: Additional move parameters (game-specific)
 
         Returns:
-            Tuple of (success: bool, message: str)
+            MoveResult containing success status and message
         """
         pass
 
@@ -53,11 +63,13 @@ class PuzzleGame(ABC):
         pass
 
     @abstractmethod
-    def get_hint(self) -> tuple[Any, str] | None:
+    async def get_hint(self) -> tuple[Any, str] | None:
         """Get a hint for the next move.
 
         Returns:
             Tuple of (hint_data, hint_message) or None if no hints available
+
+        This is async to allow for complex hint computation.
         """
         pass
 

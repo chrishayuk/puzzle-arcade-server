@@ -8,33 +8,33 @@ from puzzle_arcade_server.games.mastermind import MastermindGame
 class TestMastermindGame:
     """Test suite for Mastermind game."""
 
-    def test_initialization_easy(self):
+    async def test_initialization_easy(self):
         """Test game initialization with easy difficulty."""
         game = MastermindGame("easy")
         assert game.difficulty == "easy"
         assert game.code_length == 4
         assert game.num_colors == 6
-        assert game.max_guesses == 10
+        assert game.max_guesses == 12
         assert game.name == "Mastermind"
 
-    def test_initialization_medium(self):
+    async def test_initialization_medium(self):
         """Test game initialization with medium difficulty."""
         game = MastermindGame("medium")
         assert game.code_length == 5
         assert game.num_colors == 7
         assert game.max_guesses == 12
 
-    def test_initialization_hard(self):
+    async def test_initialization_hard(self):
         """Test game initialization with hard difficulty."""
         game = MastermindGame("hard")
         assert game.code_length == 6
         assert game.num_colors == 8
         assert game.max_guesses == 15
 
-    def test_generate_puzzle(self):
+    async def test_generate_puzzle(self):
         """Test puzzle generation."""
         game = MastermindGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         assert game.game_started is True
         assert game.moves_made == 0
@@ -43,7 +43,7 @@ class TestMastermindGame:
         assert len(game.guesses) == 0
         assert len(game.feedback) == 0
 
-    def test_calculate_feedback_all_correct(self):
+    async def test_calculate_feedback_all_correct(self):
         """Test feedback calculation with all correct."""
         game = MastermindGame("easy")
         game.secret_code = [1, 2, 3, 4]
@@ -52,7 +52,7 @@ class TestMastermindGame:
         assert black == 4
         assert white == 0
 
-    def test_calculate_feedback_all_wrong(self):
+    async def test_calculate_feedback_all_wrong(self):
         """Test feedback calculation with all wrong."""
         game = MastermindGame("easy")
         game.secret_code = [1, 2, 3, 4]
@@ -61,7 +61,7 @@ class TestMastermindGame:
         assert black == 0
         assert white == 0
 
-    def test_calculate_feedback_mixed(self):
+    async def test_calculate_feedback_mixed(self):
         """Test feedback calculation with mixed results."""
         game = MastermindGame("easy")
         game.secret_code = [1, 2, 3, 4]
@@ -71,7 +71,7 @@ class TestMastermindGame:
         assert black == 1  # 1 in position 0
         assert white == 2  # 3 and 4 are in code but wrong positions
 
-    def test_calculate_feedback_duplicates(self):
+    async def test_calculate_feedback_duplicates(self):
         """Test feedback calculation with duplicate colors."""
         game = MastermindGame("easy")
         game.secret_code = [1, 1, 2, 3]
@@ -81,7 +81,7 @@ class TestMastermindGame:
         assert black == 1  # 1 in position 0
         assert white == 2  # 2 and 3 in wrong positions
 
-    def test_calculate_feedback_no_double_count(self):
+    async def test_calculate_feedback_no_double_count(self):
         """Test that feedback doesn't double-count colors."""
         game = MastermindGame("easy")
         game.secret_code = [1, 2, 3, 4]
@@ -91,35 +91,38 @@ class TestMastermindGame:
         assert black == 1  # Only position 0 is correct
         assert white == 0  # No other 1s to match
 
-    def test_validate_move_success(self):
+    async def test_validate_move_success(self):
         """Test successful move validation."""
         game = MastermindGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
-        success, message = game.validate_move(1, 2, 3, 4)
+        result = await game.validate_move(1, 2, 3, 4)
+        success, _message = result.success, result.message
         assert success is True
         assert len(game.guesses) == 1
         assert game.moves_made == 1
 
-    def test_validate_move_wrong_length(self):
+    async def test_validate_move_wrong_length(self):
         """Test move with wrong number of colors."""
         game = MastermindGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
-        success, message = game.validate_move(1, 2, 3)
+        result = await game.validate_move(1, 2, 3)
+        success, message = result.success, result.message
         assert success is False
         assert "exactly" in message.lower()
 
-    def test_validate_move_invalid_color(self):
+    async def test_validate_move_invalid_color(self):
         """Test move with invalid color."""
         game = MastermindGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
-        success, message = game.validate_move(1, 2, 3, 99)
+        result = await game.validate_move(1, 2, 3, 99)
+        success, message = result.success, result.message
         assert success is False
         assert "Invalid color" in message
 
-    def test_validate_move_win(self):
+    async def test_validate_move_win(self):
         """Test winning the game."""
         game = MastermindGame("easy")
         game.secret_code = [1, 2, 3, 4]
@@ -128,27 +131,29 @@ class TestMastermindGame:
         game.game_started = True
         game.max_guesses = 10
 
-        success, message = game.validate_move(1, 2, 3, 4)
+        result = await game.validate_move(1, 2, 3, 4)
+        success, message = result.success, result.message
         assert success is True
         assert "Congratulations" in message
 
-    def test_validate_move_game_over(self):
+    async def test_validate_move_game_over(self):
         """Test running out of guesses."""
         game = MastermindGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
         game.secret_code = [1, 2, 3, 4]
 
         # Fill up all guesses except one
         for _ in range(game.max_guesses - 1):
-            game.validate_move(5, 5, 5, 5)
+            await game.validate_move(5, 5, 5, 5)
 
-        # Last guess
-        success, message = game.validate_move(5, 5, 5, 5)
-        assert success is False
-        assert "Game over" in message
-        assert "1 2 3 4" in message
+        # Last guess should still succeed but mark game as over
+        result = await game.validate_move(5, 5, 5, 5)
+        assert result.success is True
+        assert result.game_over is True
+        assert "Game over" in result.message
+        assert "1 2 3 4" in result.message
 
-    def test_is_complete_won(self):
+    async def test_is_complete_won(self):
         """Test completion check when won."""
         game = MastermindGame("easy")
         game.secret_code = [1, 2, 3, 4]
@@ -157,7 +162,7 @@ class TestMastermindGame:
 
         assert game.is_complete() is True
 
-    def test_is_complete_not_won(self):
+    async def test_is_complete_not_won(self):
         """Test completion check when not won."""
         game = MastermindGame("easy")
         game.secret_code = [1, 2, 3, 4]
@@ -166,57 +171,57 @@ class TestMastermindGame:
 
         assert game.is_complete() is False
 
-    def test_is_complete_no_guesses(self):
+    async def test_is_complete_no_guesses(self):
         """Test completion check with no guesses."""
         game = MastermindGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         assert game.is_complete() is False
 
-    def test_get_hint_first_position(self):
+    async def test_get_hint_first_position(self):
         """Test hint for first guess."""
         game = MastermindGame("easy")
         game.secret_code = [1, 2, 3, 4]
         game.guesses = []
         game.feedback = []
 
-        hint_data, hint_message = game.get_hint()
+        hint_data, hint_message = await game.get_hint()
         assert hint_data == (1,)
         assert "1" in hint_message
 
-    def test_get_hint_after_guess(self):
+    async def test_get_hint_after_guess(self):
         """Test hint after making a guess."""
         game = MastermindGame("easy")
         game.secret_code = [1, 2, 3, 4]
         game.guesses = [[5, 5, 5, 5]]
         game.feedback = [(0, 0)]
 
-        hint_data, hint_message = game.get_hint()
+        hint_data, hint_message = await game.get_hint()
         assert hint_data is not None
         assert len(hint_data) == 2  # (position, color)
         assert "Position" in hint_message
 
-    def test_get_hint_solved(self):
+    async def test_get_hint_solved(self):
         """Test hint when game is solved."""
         game = MastermindGame("easy")
         game.secret_code = [1, 2, 3, 4]
         game.guesses = [[1, 2, 3, 4]]
         game.feedback = [(4, 0)]
 
-        result = game.get_hint()
+        result = await game.get_hint()
         assert result is None
 
-    def test_render_grid(self):
+    async def test_render_grid(self):
         """Test grid rendering."""
         game = MastermindGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         grid_str = game.render_grid()
         assert "Mastermind" in grid_str
         assert "Colors available:" in grid_str
         assert "Guesses remaining:" in grid_str
 
-    def test_render_grid_with_guesses(self):
+    async def test_render_grid_with_guesses(self):
         """Test grid rendering with guess history."""
         game = MastermindGame("easy")
         game.secret_code = [1, 2, 3, 4]
@@ -229,7 +234,7 @@ class TestMastermindGame:
         assert "Black" in grid_str
         assert "White" in grid_str
 
-    def test_get_rules(self):
+    async def test_get_rules(self):
         """Test rules retrieval."""
         game = MastermindGame("easy")
         rules = game.get_rules()
@@ -238,7 +243,7 @@ class TestMastermindGame:
         assert "Black peg" in rules
         assert "White peg" in rules
 
-    def test_get_commands(self):
+    async def test_get_commands(self):
         """Test commands retrieval."""
         game = MastermindGame("easy")
         commands = game.get_commands()
@@ -247,26 +252,26 @@ class TestMastermindGame:
         assert "show" in commands.lower()
         assert "hint" in commands.lower()
 
-    def test_get_stats(self):
+    async def test_get_stats(self):
         """Test statistics retrieval."""
         game = MastermindGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         stats = game.get_stats()
         assert "Guesses made:" in stats
         assert "Code length:" in stats
         assert "Colors:" in stats
 
-    def test_moves_counter(self):
+    async def test_moves_counter(self):
         """Test that moves are counted correctly."""
         game = MastermindGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         initial_moves = game.moves_made
-        game.validate_move(1, 2, 3, 4)
+        await game.validate_move(1, 2, 3, 4)
         assert game.moves_made == initial_moves + 1
 
-    def test_color_names(self):
+    async def test_color_names(self):
         """Test color name mapping."""
         game = MastermindGame("easy")
 
@@ -284,7 +289,7 @@ class TestMastermindGame:
             ([1, 2, 3, 4], [5, 6, 5, 6], 0, 0),  # All wrong
         ],
     )
-    def test_feedback_scenarios(self, secret, guess, expected_black, expected_white):
+    async def test_feedback_scenarios(self, secret, guess, expected_black, expected_white):
         """Test various feedback scenarios."""
         game = MastermindGame("easy")
         game.secret_code = secret
@@ -293,7 +298,7 @@ class TestMastermindGame:
         assert black == expected_black
         assert white == expected_white
 
-    def test_feedback_stored_correctly(self):
+    async def test_feedback_stored_correctly(self):
         """Test that feedback is stored with guesses."""
         game = MastermindGame("easy")
         game.secret_code = [1, 2, 3, 4]
@@ -302,7 +307,7 @@ class TestMastermindGame:
         game.game_started = True
         game.max_guesses = 10
 
-        game.validate_move(1, 2, 5, 6)
+        await game.validate_move(1, 2, 5, 6)
 
         assert len(game.guesses) == 1
         assert len(game.feedback) == 1

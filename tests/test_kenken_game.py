@@ -12,7 +12,7 @@ from puzzle_arcade_server.games.kenken import KenKenGame
 class TestKenKenGame:
     """Test suite for KenKenGame class."""
 
-    def test_initialization(self):
+    async def test_initialization(self):
         """Test game initialization."""
         game = KenKenGame("easy")
         assert game.difficulty == "easy"
@@ -20,17 +20,17 @@ class TestKenKenGame:
         assert len(game.grid) == 4
         assert len(game.grid[0]) == 4
 
-    def test_difficulty_sizes(self):
+    async def test_difficulty_sizes(self):
         """Test different difficulty sizes."""
         for difficulty, expected_size in [("easy", 4), ("medium", 5), ("hard", 6)]:
             game = KenKenGame(difficulty)
             assert game.size == expected_size
             assert len(game.grid) == expected_size
 
-    def test_generate_puzzle(self):
+    async def test_generate_puzzle(self):
         """Test puzzle generation."""
         game = KenKenGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Check solution is valid
         assert all(len(row) == game.size for row in game.solution)
@@ -42,46 +42,48 @@ class TestKenKenGame:
         # Grid should start empty
         assert all(cell == 0 for row in game.grid for cell in row)
 
-    def test_is_valid_move(self):
+    async def test_is_valid_move(self):
         """Test move validation."""
         game = KenKenGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Place a valid number
         row, col = 0, 0
         num = game.solution[row][col]
         assert game.is_valid_move(row, col, num)
 
-    def test_place_number(self):
+    async def test_place_number(self):
         """Test placing a number."""
         game = KenKenGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Place the correct number
         row, col = 0, 0
         correct_num = game.solution[row][col]
-        success, msg = game.validate_move(row + 1, col + 1, correct_num)
+        result = await game.validate_move(row + 1, col + 1, correct_num)
+        success, _msg = result.success, result.message
         assert success
         assert game.grid[row][col] == correct_num
 
-    def test_clear_cell(self):
+    async def test_clear_cell(self):
         """Test clearing a cell."""
         game = KenKenGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Place and clear
         row, col = 0, 0
         correct_num = game.solution[row][col]
-        game.validate_move(row + 1, col + 1, correct_num)
+        await game.validate_move(row + 1, col + 1, correct_num)
 
-        success, msg = game.validate_move(row + 1, col + 1, 0)
+        result = await game.validate_move(row + 1, col + 1, 0)
+        success, _msg = result.success, result.message
         assert success
         assert game.grid[row][col] == 0
 
-    def test_is_complete(self):
+    async def test_is_complete(self):
         """Test completion check."""
         game = KenKenGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         assert not game.is_complete()
 
@@ -89,12 +91,12 @@ class TestKenKenGame:
         game.grid = [row[:] for row in game.solution]
         assert game.is_complete()
 
-    def test_get_hint(self):
+    async def test_get_hint(self):
         """Test hint generation."""
         game = KenKenGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
-        hint = game.get_hint()
+        hint = await game.get_hint()
         assert hint is not None
         hint_data, hint_message = hint
         row, col, num = hint_data
@@ -102,59 +104,61 @@ class TestKenKenGame:
         assert 1 <= col <= game.size
         assert 1 <= num <= game.size
 
-    def test_render_grid(self):
+    async def test_render_grid(self):
         """Test grid rendering."""
         game = KenKenGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         grid_str = game.render_grid()
         assert isinstance(grid_str, str)
         assert "Cages:" in grid_str
 
-    def test_get_rules(self):
+    async def test_get_rules(self):
         """Test rules retrieval."""
         game = KenKenGame("easy")
         rules = game.get_rules()
         assert "KENKEN" in rules.upper()
         assert "cage" in rules.lower()
 
-    def test_get_commands(self):
+    async def test_get_commands(self):
         """Test commands retrieval."""
         game = KenKenGame("easy")
         commands = game.get_commands()
         assert "place" in commands.lower()
         assert "clear" in commands.lower()
 
-    def test_name_and_description(self):
+    async def test_name_and_description(self):
         """Test name and description properties."""
         game = KenKenGame("easy")
         assert game.name == "KenKen"
         assert len(game.description) > 0
 
-    def test_invalid_coordinates(self):
+    async def test_invalid_coordinates(self):
         """Test invalid coordinate handling."""
         game = KenKenGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Out of bounds
-        success, msg = game.validate_move(10, 10, 1)
+        result = await game.validate_move(10, 10, 1)
+        success, msg = result.success, result.message
         assert not success
         assert "Invalid coordinates" in msg
 
-    def test_invalid_number(self):
+    async def test_invalid_number(self):
         """Test invalid number handling."""
         game = KenKenGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Number out of range
-        success, msg = game.validate_move(1, 1, 99)
+        result = await game.validate_move(1, 1, 99)
+        success, msg = result.success, result.message
         assert not success
         assert "Invalid number" in msg
 
-    def test_solve_method(self):
+    async def test_solve_method(self):
         """Test the solve method."""
         game = KenKenGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Create a copy and solve it
         test_grid = [[0 for _ in range(game.size)] for _ in range(game.size)]
@@ -165,10 +169,10 @@ class TestKenKenGame:
         # The solve method should be able to work with the grid
         assert game.solution is not None
 
-    def test_check_cage_constraints(self):
+    async def test_check_cage_constraints(self):
         """Test cage constraint checking."""
         game = KenKenGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Fill grid with solution to test cage validation
         game.grid = [row[:] for row in game.solution]
@@ -176,24 +180,24 @@ class TestKenKenGame:
         # All cages should be satisfied
         assert game.is_complete()
 
-    def test_evaluate_cage(self):
+    async def test_evaluate_cage(self):
         """Test cage evaluation logic."""
         game = KenKenGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Test with a known cage from the solution
         if len(game.cages) > 0:
-            cells, operation, target = game.cages[0]
-            values = [game.solution[r][c] for r, c in cells]
+            cage = game.cages[0]
+            values = [game.solution[r][c] for r, c in cage.cells]
 
             # Cage should evaluate correctly with solution values
-            result = game._evaluate_cage(values, operation, target)
+            result = game._evaluate_cage(values, cage.operation, cage.target)
             assert result
 
-    def test_get_stats(self):
+    async def test_get_stats(self):
         """Test stats retrieval."""
         game = KenKenGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         stats = game.get_stats()
         assert "Moves made" in stats
@@ -201,23 +205,23 @@ class TestKenKenGame:
         assert "Grid size" in stats
         assert "Inequalities" in stats or "size" in stats  # Different games have different stats
 
-    def test_generate_inequalities(self):
+    async def test_generate_inequalities(self):
         """Test inequality generation."""
         game = KenKenGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Cages should have been generated
         assert len(game.cages) > 0
 
         # Each cage should have cells, operation, and target
-        for cells, _operation, target in game.cages:
-            assert len(cells) >= 1
-            assert target >= 1
+        for cage in game.cages:
+            assert len(cage.cells) >= 1
+            assert cage.target >= 1
 
-    def test_solve_empty_grid(self):
+    async def test_solve_empty_grid(self):
         """Test solving an empty grid."""
         game = KenKenGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Create empty grid and try to solve
         [[0 for _ in range(game.size)] for _ in range(game.size)]
@@ -226,7 +230,7 @@ class TestKenKenGame:
         # (Full solve might timeout, so just test the method exists)
         assert hasattr(game, "solve")
 
-    def test_evaluate_different_operations(self):
+    async def test_evaluate_different_operations(self):
         """Test cage evaluation with different operations."""
         game = KenKenGame("easy")
 
@@ -252,10 +256,10 @@ class TestKenKenGame:
         assert game._evaluate_cage([5], None, 5)
         assert not game._evaluate_cage([5], None, 3)
 
-    def test_row_column_uniqueness(self):
+    async def test_row_column_uniqueness(self):
         """Test that solution has unique values in rows and columns."""
         game = KenKenGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Check rows are unique
         for row in game.solution:
@@ -266,10 +270,10 @@ class TestKenKenGame:
             col_vals = [game.solution[row][col] for row in range(game.size)]
             assert len(col_vals) == len(set(col_vals))
 
-    def test_cage_constraint_checking(self):
+    async def test_cage_constraint_checking(self):
         """Test _check_cage_constraints method."""
         game = KenKenGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Fill a cell with solution value
         for row in range(game.size):
@@ -281,10 +285,10 @@ class TestKenKenGame:
                     game.grid[row][col] = 0
                     return
 
-    def test_is_valid_move_with_grid_param(self):
+    async def test_is_valid_move_with_grid_param(self):
         """Test is_valid_move with explicit grid parameter."""
         game = KenKenGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Create a test grid
         test_grid = [[0 for _ in range(game.size)] for _ in range(game.size)]
@@ -296,7 +300,7 @@ class TestKenKenGame:
         # Try placing same number in same column
         assert not game.is_valid_move(1, 0, 1, test_grid)
 
-    def test_evaluate_cage_edge_cases(self):
+    async def test_evaluate_cage_edge_cases(self):
         """Test edge cases in cage evaluation."""
         game = KenKenGame("easy")
 

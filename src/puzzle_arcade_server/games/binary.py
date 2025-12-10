@@ -3,7 +3,10 @@
 import random
 from typing import Any
 
+from puzzle_arcade_server.models.enums import DifficultyLevel
+
 from ..base.puzzle_game import PuzzleGame
+from ..models import BinaryConfig, MoveResult
 
 
 class BinaryPuzzleGame(PuzzleGame):
@@ -24,7 +27,8 @@ class BinaryPuzzleGame(PuzzleGame):
         super().__init__(difficulty)
 
         # Grid size based on difficulty (must be even)
-        self.size = {"easy": 6, "medium": 8, "hard": 10}.get(difficulty, 6)
+        self.config = BinaryConfig.from_difficulty(self.difficulty)
+        self.size = self.config.size
 
         # Grid: -1 = empty, 0 or 1 = filled
         self.grid = [[-1 for _ in range(self.size)] for _ in range(self.size)]
@@ -114,7 +118,7 @@ class BinaryPuzzleGame(PuzzleGame):
 
         return True
 
-    def generate_puzzle(self) -> None:
+    async def generate_puzzle(self) -> None:
         """Generate a new Binary Puzzle."""
         # Start with a simple pattern that satisfies constraints
         # Alternating pattern with some randomness
@@ -158,9 +162,12 @@ class BinaryPuzzleGame(PuzzleGame):
                 attempts += 1
 
         # Remove some cells based on difficulty
-        cells_to_remove = {"easy": self.size * 2, "medium": self.size * 3, "hard": self.size * 4}.get(
-            self.difficulty, self.size * 2
-        )
+        cells_to_remove_map = {
+            DifficultyLevel.EASY: self.size * 2,
+            DifficultyLevel.MEDIUM: self.size * 3,
+            DifficultyLevel.HARD: self.size * 4,
+        }
+        cells_to_remove = cells_to_remove_map[self.difficulty]
 
         # Copy solution to grid
         self.grid = [row[:] for row in self.solution]
@@ -176,7 +183,7 @@ class BinaryPuzzleGame(PuzzleGame):
         self.moves_made = 0
         self.game_started = True
 
-    def validate_move(self, row: int, col: int, num: int) -> tuple[bool, str]:
+    async def validate_move(self, row: int, col: int, num: int) -> MoveResult:
         """Place a number on the grid.
 
         Args:
@@ -185,7 +192,7 @@ class BinaryPuzzleGame(PuzzleGame):
             num: Number to place (0, 1, or -1 to clear)
 
         Returns:
-            Tuple of (success, message)
+            MoveResult indicating success/failure and message
         """
         # Convert to 0-indexed
         row -= 1
@@ -193,20 +200,20 @@ class BinaryPuzzleGame(PuzzleGame):
 
         # Validate coordinates
         if not (0 <= row < self.size and 0 <= col < self.size):
-            return False, f"Invalid coordinates. Use row and column between 1-{self.size}."
+            return MoveResult(success=False, message=f"Invalid coordinates. Use row and column between 1-{self.size}.")
 
         # Check if this cell is part of the initial puzzle
         if self.initial_grid[row][col] != -1:
-            return False, "Cannot modify initial puzzle cells."
+            return MoveResult(success=False, message="Cannot modify initial puzzle cells.")
 
         # Clear the cell
         if num == -1 or num == 2:  # Accept 2 as clear command for convenience
             self.grid[row][col] = -1
-            return True, "Cell cleared."
+            return MoveResult(success=True, message="Cell cleared.", state_changed=True)
 
         # Validate number
         if num not in [0, 1]:
-            return False, "Invalid number. Use 0, 1, or 2 to clear."
+            return MoveResult(success=False, message="Invalid number. Use 0, 1, or 2 to clear.")
 
         # Check if the move is valid
         old_value = self.grid[row][col]
@@ -215,21 +222,21 @@ class BinaryPuzzleGame(PuzzleGame):
         # Check no three consecutive
         if not self._check_no_three_consecutive(self.grid):
             self.grid[row][col] = old_value
-            return False, "Invalid move! This creates three consecutive identical values."
+            return MoveResult(success=False, message="Invalid move! This creates three consecutive identical values.")
 
         # Check count constraints
         row_vals = self.grid[row]
         if not self._check_equal_counts(row_vals):
             self.grid[row][col] = old_value
-            return False, "Invalid move! This exceeds the count limit for this row."
+            return MoveResult(success=False, message="Invalid move! This exceeds the count limit for this row.")
 
         col_vals = [self.grid[r][col] for r in range(self.size)]
         if not self._check_equal_counts(col_vals):
             self.grid[row][col] = old_value
-            return False, "Invalid move! This exceeds the count limit for this column."
+            return MoveResult(success=False, message="Invalid move! This exceeds the count limit for this column.")
 
         self.moves_made += 1
-        return True, "Number placed successfully!"
+        return MoveResult(success=True, message="Number placed successfully!", state_changed=True)
 
     def is_complete(self) -> bool:
         """Check if the puzzle is complete and correct."""
@@ -243,7 +250,7 @@ class BinaryPuzzleGame(PuzzleGame):
 
         return True
 
-    def get_hint(self) -> tuple[Any, str] | None:
+    async def get_hint(self) -> tuple[Any, str] | None:
         """Get a hint for the next move.
 
         Returns:

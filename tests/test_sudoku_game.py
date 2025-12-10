@@ -12,17 +12,17 @@ from puzzle_arcade_server.games.sudoku import SudokuGame
 class TestSudokuGame:
     """Test suite for SudokuGame class."""
 
-    def test_initialization(self):
+    async def test_initialization(self):
         """Test game initialization."""
         game = SudokuGame("easy")
         assert game.difficulty == "easy"
         assert len(game.grid) == 9
         assert len(game.grid[0]) == 9
 
-    def test_generate_puzzle(self):
+    async def test_generate_puzzle(self):
         """Test puzzle generation."""
         game = SudokuGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Check that solution is valid
         assert all(len(row) == 9 for row in game.solution)
@@ -32,10 +32,10 @@ class TestSudokuGame:
         empty_count = sum(1 for row in game.grid for cell in row if cell == 0)
         assert empty_count == 35  # Easy difficulty removes 35 cells
 
-    def test_is_valid_move(self):
+    async def test_is_valid_move(self):
         """Test move validation."""
         game = SudokuGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Test valid move (empty cell)
         row, col = 0, 0
@@ -50,39 +50,41 @@ class TestSudokuGame:
         correct_num = game.solution[row][col]
         assert game.is_valid_move(row, col, correct_num)
 
-    def test_place_number(self):
+    async def test_place_number(self):
         """Test placing a number."""
         game = SudokuGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Find an empty cell
         for r in range(9):
             for c in range(9):
                 if game.grid[r][c] == 0:
                     # Try to place the correct number (1-indexed for user)
-                    success, msg = game.validate_move(r + 1, c + 1, game.solution[r][c])
+                    result = await game.validate_move(r + 1, c + 1, game.solution[r][c])
+                    success, _msg = result.success, result.message
                     assert success
                     assert game.grid[r][c] == game.solution[r][c]
                     break
 
-    def test_cannot_modify_initial_cells(self):
+    async def test_cannot_modify_initial_cells(self):
         """Test that initial cells cannot be modified."""
         game = SudokuGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Find an initial cell (non-zero in initial_grid)
         for r in range(9):
             for c in range(9):
                 if game.initial_grid[r][c] != 0:
-                    success, msg = game.validate_move(r + 1, c + 1, 5)
+                    result = await game.validate_move(r + 1, c + 1, 5)
+                    success, msg = result.success, result.message
                     assert not success
                     assert "Cannot modify" in msg
                     break
 
-    def test_is_complete(self):
+    async def test_is_complete(self):
         """Test puzzle completion check."""
         game = SudokuGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Initially not complete
         assert not game.is_complete()
@@ -91,12 +93,12 @@ class TestSudokuGame:
         game.grid = [row[:] for row in game.solution]
         assert game.is_complete()
 
-    def test_get_hint(self):
+    async def test_get_hint(self):
         """Test hint generation."""
         game = SudokuGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
-        hint = game.get_hint()
+        hint = await game.get_hint()
         assert hint is not None
         hint_data, hint_message = hint
         row, col, num = hint_data
@@ -107,49 +109,51 @@ class TestSudokuGame:
         assert 1 <= num <= 9
         assert num == game.solution[row - 1][col - 1]
 
-    def test_difficulty_levels(self):
+    async def test_difficulty_levels(self):
         """Test different difficulty levels."""
         for difficulty, expected_removed in [("easy", 35), ("medium", 45), ("hard", 55)]:
             game = SudokuGame(difficulty)
-            game.generate_puzzle()
+            await game.generate_puzzle()
 
             empty_count = sum(1 for row in game.grid for cell in row if cell == 0)
             assert empty_count == expected_removed
 
-    def test_render_grid(self):
+    async def test_render_grid(self):
         """Test grid rendering."""
         game = SudokuGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         grid_str = game.render_grid()
         assert isinstance(grid_str, str)
         assert "1 2 3" in grid_str  # Column headers
         assert "|" in grid_str  # Grid lines
 
-    def test_clear_cell(self):
+    async def test_clear_cell(self):
         """Test clearing a cell."""
         game = SudokuGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Find an empty cell and place the correct number
         for r in range(9):
             for c in range(9):
                 if game.grid[r][c] == 0:
                     correct_num = game.solution[r][c]
-                    success, msg = game.validate_move(r + 1, c + 1, correct_num)
+                    result = await game.validate_move(r + 1, c + 1, correct_num)
+                    success, _msg = result.success, result.message
                     assert success
                     assert game.grid[r][c] == correct_num
 
                     # Clear it
-                    success, msg = game.validate_move(r + 1, c + 1, 0)
+                    result = await game.validate_move(r + 1, c + 1, 0)
+                    success, _msg = result.success, result.message
                     assert success
                     assert game.grid[r][c] == 0
                     return  # Exit after testing one cell
 
-    def test_invalid_move(self):
+    async def test_invalid_move(self):
         """Test invalid move detection."""
         game = SudokuGame("easy")
-        game.generate_puzzle()
+        await game.generate_puzzle()
 
         # Create a conflict by placing duplicate in row
         for r in range(9):
@@ -166,7 +170,8 @@ class TestSudokuGame:
                 # Try to place same number in different column
                 for c in range(9):
                     if c != existing_col and game.grid[r][c] == 0:
-                        success, msg = game.validate_move(r + 1, c + 1, existing_num)
+                        result = await game.validate_move(r + 1, c + 1, existing_num)
+                        success, msg = result.success, result.message
                         assert not success
                         assert "conflicts" in msg.lower() or "invalid" in msg.lower()
                         break

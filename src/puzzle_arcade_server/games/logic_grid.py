@@ -4,6 +4,14 @@ import random
 from typing import Any
 
 from ..base.puzzle_game import PuzzleGame
+from ..constants import (
+    LOGIC_GRID_CATEGORIES,
+    LOGIC_GRID_COLORS,
+    LOGIC_GRID_DRINKS,
+    LOGIC_GRID_PEOPLE,
+    LOGIC_GRID_PETS,
+)
+from ..models import LogicGridCategories, LogicGridConfig, MoveResult, PersonAttributes
 
 
 class LogicGridGame(PuzzleGame):
@@ -21,19 +29,20 @@ class LogicGridGame(PuzzleGame):
         """
         super().__init__(difficulty)
 
-        # Number of items/people based on difficulty
-        self.size = {"easy": 3, "medium": 4, "hard": 5}.get(difficulty, 3)
+        # Use pydantic config based on difficulty
+        self.config = LogicGridConfig.from_difficulty(self.difficulty)
+        self.num_people = self.config.num_people
 
-        # Categories and their values
-        self.categories = {
-            "person": ["Alice", "Bob", "Carol", "Dave", "Eve"][: self.size],
-            "color": ["Red", "Blue", "Green", "Yellow", "Purple"][: self.size],
-            "pet": ["Cat", "Dog", "Bird", "Fish", "Rabbit"][: self.size],
-            "drink": ["Coffee", "Tea", "Juice", "Water", "Milk"][: self.size],
-        }
+        # Categories using Pydantic model with constants
+        self.categories = LogicGridCategories(
+            person=LOGIC_GRID_PEOPLE[: self.num_people],
+            color=LOGIC_GRID_COLORS[: self.num_people],
+            pet=LOGIC_GRID_PETS[: self.num_people],
+            drink=LOGIC_GRID_DRINKS[: self.num_people],
+        )
 
-        # Solution: dict mapping person -> {category: value}
-        self.solution: dict[str, dict[str, str]] = {}
+        # Solution: dict mapping person -> PersonAttributes
+        self.solution: dict[str, PersonAttributes] = {}
 
         # Player grid: dict of (category1, value1, category2, value2) -> bool | None
         # True = definitely connected, False = definitely not connected, None = unknown
@@ -54,12 +63,12 @@ class LogicGridGame(PuzzleGame):
 
     def _generate_solution(self) -> None:
         """Generate a random valid solution."""
-        people = self.categories["person"]
+        people = self.categories.person
 
         # Randomly assign each attribute to each person
-        colors = self.categories["color"][:]
-        pets = self.categories["pet"][:]
-        drinks = self.categories["drink"][:]
+        colors = self.categories.color[:]
+        pets = self.categories.pet[:]
+        drinks = self.categories.drink[:]
 
         random.shuffle(colors)
         random.shuffle(pets)
@@ -67,37 +76,40 @@ class LogicGridGame(PuzzleGame):
 
         self.solution = {}
         for i, person in enumerate(people):
-            self.solution[person] = {
-                "color": colors[i],
-                "pet": pets[i],
-                "drink": drinks[i],
-            }
+            self.solution[person] = PersonAttributes(
+                color=colors[i],
+                pet=pets[i],
+                drink=drinks[i],
+            )
 
     def _generate_clues(self) -> None:
         """Generate clues from the solution."""
         self.clues = []
-        people = self.categories["person"]
+        people = self.categories.person
 
         # Generate direct association clues
-        num_direct = self.size - 1
+        num_direct = self.num_people - 1
         for i in range(num_direct):
             person = people[i]
             attrs = self.solution[person]
 
             # Choose two attributes to reveal
             cat1, cat2 = random.sample(["color", "pet", "drink"], 2)
-            clue = f"{person} has the {attrs[cat1]} {cat1} and drinks {attrs[cat2]}"
+            val1 = getattr(attrs, cat1)
+            val2 = getattr(attrs, cat2)
+            clue = f"{person} has the {val1} {cat1} and drinks {val2}"
             self.clues.append(clue)
 
         # Generate relative/constraint clues
-        for _ in range(self.size):
+        for _ in range(self.num_people):
             p1, p2 = random.sample(people, 2)
             cat = random.choice(["color", "pet", "drink"])
 
-            clue = f"{p1} does not have the {self.solution[p2][cat]} {cat}"
+            val = getattr(self.solution[p2], cat)
+            clue = f"{p1} does not have the {val} {cat}"
             self.clues.append(clue)
 
-    def generate_puzzle(self) -> None:
+    async def generate_puzzle(self) -> None:
         """Generate a new Logic Grid puzzle."""
         self._generate_solution()
         self._generate_clues()
@@ -108,7 +120,7 @@ class LogicGridGame(PuzzleGame):
         self.moves_made = 0
         self.game_started = True
 
-    def validate_move(self, cat1: str, val1: str, cat2: str, val2: str, state: bool) -> tuple[bool, str]:
+    async def validate_move(self, cat1: str, val1: str, cat2: str, val2: str, state: bool) -> MoveResult:
         """Mark a connection in the logic grid.
 
         Args:
@@ -119,70 +131,80 @@ class LogicGridGame(PuzzleGame):
             state: True = connected, False = not connected
 
         Returns:
-            Tuple of (success, message)
+            MoveResult with success status and message
         """
         # Normalize categories
         cat1 = cat1.lower()
         cat2 = cat2.lower()
 
         # Validate categories
-        if cat1 not in self.categories or cat2 not in self.categories:
-            return False, f"Invalid category. Use: {', '.join(self.categories.keys())}"
+        valid_categories = ["person", "color", "pet", "drink"]
+        if cat1 not in valid_categories or cat2 not in valid_categories:
+            return MoveResult(success=False, message=f"Invalid category. Use: {', '.join(valid_categories)}")
 
         if cat1 == cat2:
-            return False, "Cannot connect values from the same category"
+            return MoveResult(success=False, message="Cannot connect values from the same category")
 
         # Validate values
-        if val1 not in self.categories[cat1]:
-            return False, f"Invalid {cat1}. Choose from: {', '.join(self.categories[cat1])}"
+        cat1_values = getattr(self.categories, cat1)
+        cat2_values = getattr(self.categories, cat2)
 
-        if val2 not in self.categories[cat2]:
-            return False, f"Invalid {cat2}. Choose from: {', '.join(self.categories[cat2])}"
+        if val1 not in cat1_values:
+            return MoveResult(success=False, message=f"Invalid {cat1}. Choose from: {', '.join(cat1_values)}")
+
+        if val2 not in cat2_values:
+            return MoveResult(success=False, message=f"Invalid {cat2}. Choose from: {', '.join(cat2_values)}")
 
         # Store the connection (normalize order)
         key = (cat1, val1, cat2, val2) if cat1 < cat2 else (cat2, val2, cat1, val1)
         self.player_grid[key] = state
         self.moves_made += 1
 
-        return True, f"Marked {val1} ({cat1}) and {val2} ({cat2}) as {'connected' if state else 'not connected'}"
+        return MoveResult(
+            success=True,
+            message=f"Marked {val1} ({cat1}) and {val2} ({cat2}) as {'connected' if state else 'not connected'}",
+            state_changed=True,
+        )
 
     def is_complete(self) -> bool:
         """Check if the puzzle is complete and correct."""
         # Check if player has correctly identified all connections
-        for person in self.categories["person"]:
+        for person in self.categories.person:
             attrs = self.solution[person]
 
             # Check person -> color
-            key1 = ("color", attrs["color"], "person", person)
-            key2 = ("person", person, "color", attrs["color"])
+            key1 = ("color", attrs.color, "person", person)
+            key2 = ("person", person, "color", attrs.color)
             if not self.player_grid.get(key1) and not self.player_grid.get(key2):
                 return False
 
             # Check person -> pet
-            key1 = ("person", person, "pet", attrs["pet"])
-            key2 = ("pet", attrs["pet"], "person", person)
+            key1 = ("person", person, "pet", attrs.pet)
+            key2 = ("pet", attrs.pet, "person", person)
             if not self.player_grid.get(key1) and not self.player_grid.get(key2):
                 return False
 
             # Check person -> drink
-            key1 = ("drink", attrs["drink"], "person", person)
-            key2 = ("person", person, "drink", attrs["drink"])
+            key1 = ("drink", attrs.drink, "person", person)
+            key2 = ("person", person, "drink", attrs.drink)
             if not self.player_grid.get(key1) and not self.player_grid.get(key2):
                 return False
 
         return True
 
-    def get_hint(self) -> tuple[Any, str] | None:
+    async def get_hint(self) -> tuple[Any, str] | None:
         """Get a hint for the next move.
 
         Returns:
             Tuple of (hint_data, hint_message) or None if puzzle is complete
         """
         # Find a connection that hasn't been marked
-        for person in self.categories["person"]:
+        for person in self.categories.person:
             attrs = self.solution[person]
 
-            for cat, val in attrs.items():
+            # Check all categories except person
+            for cat in [c for c in LOGIC_GRID_CATEGORIES if c != "person"]:
+                val = getattr(attrs, cat)
                 key1 = (cat, val, "person", person)
                 key2 = ("person", person, cat, val)
 
@@ -219,7 +241,8 @@ class LogicGridGame(PuzzleGame):
                     lines.append(f"  ✗ {val1} ({cat1}) ←/→ {val2} ({cat2})")
 
         lines.append("\nCATEGORIES:")
-        for cat, values in self.categories.items():
+        for cat in LOGIC_GRID_CATEGORIES:
+            values = getattr(self.categories, cat)
             lines.append(f"  {cat.capitalize()}: {', '.join(values)}")
 
         return "\n".join(lines)

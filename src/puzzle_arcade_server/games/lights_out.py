@@ -4,6 +4,7 @@ import random
 from typing import Any
 
 from ..base.puzzle_game import PuzzleGame
+from ..models import LightsOutConfig, MoveResult
 
 
 class LightsOutGame(PuzzleGame):
@@ -22,8 +23,9 @@ class LightsOutGame(PuzzleGame):
         """
         super().__init__(difficulty)
 
-        # Grid size based on difficulty
-        self.size = {"easy": 5, "medium": 6, "hard": 7}.get(difficulty, 5)
+        # Use pydantic config based on difficulty
+        self.config = LightsOutConfig.from_difficulty(self.difficulty)
+        self.size = self.config.size
 
         # Grid: 0 = off, 1 = on
         self.grid = [[0 for _ in range(self.size)] for _ in range(self.size)]
@@ -61,14 +63,14 @@ class LightsOutGame(PuzzleGame):
             if 0 <= new_row < self.size and 0 <= new_col < self.size:
                 grid[new_row][new_col] = 1 - grid[new_row][new_col]
 
-    def generate_puzzle(self) -> None:
+    async def generate_puzzle(self) -> None:
         """Generate a new Lights Out puzzle."""
         # Start with all lights off
         self.grid = [[0 for _ in range(self.size)] for _ in range(self.size)]
         self.solution = [[0 for _ in range(self.size)] for _ in range(self.size)]
 
         # Generate a random solution pattern (which cells to press)
-        num_presses = {"easy": 3, "medium": 5, "hard": 7}.get(self.difficulty, 3)
+        num_presses = self.config.num_presses
 
         # Randomly select cells to press
         pressed_cells: set[tuple[int, int]] = set()
@@ -89,7 +91,7 @@ class LightsOutGame(PuzzleGame):
         self.moves_made = 0
         self.game_started = True
 
-    def validate_move(self, row: int, col: int) -> tuple[bool, str]:
+    async def validate_move(self, row: int, col: int) -> MoveResult:
         """Toggle a cell (press it).
 
         Args:
@@ -97,7 +99,7 @@ class LightsOutGame(PuzzleGame):
             col: Column index (1-indexed, user-facing)
 
         Returns:
-            Tuple of (success, message)
+            MoveResult with success status and message
         """
         # Convert to 0-indexed
         row -= 1
@@ -105,13 +107,13 @@ class LightsOutGame(PuzzleGame):
 
         # Validate coordinates
         if not (0 <= row < self.size and 0 <= col < self.size):
-            return False, f"Invalid coordinates. Use row and column between 1-{self.size}."
+            return MoveResult(success=False, message=f"Invalid coordinates. Use row and column between 1-{self.size}.")
 
         # Toggle the cell and neighbors
         self._toggle_cell(row, col, self.grid)
         self.moves_made += 1
 
-        return True, f"Toggled light at ({row + 1}, {col + 1})"
+        return MoveResult(success=True, message=f"Toggled light at ({row + 1}, {col + 1})", state_changed=True)
 
     def is_complete(self) -> bool:
         """Check if the puzzle is complete (all lights off)."""
@@ -121,7 +123,7 @@ class LightsOutGame(PuzzleGame):
                     return False
         return True
 
-    def get_hint(self) -> tuple[Any, str] | None:
+    async def get_hint(self) -> tuple[Any, str] | None:
         """Get a hint for the next move.
 
         Returns:

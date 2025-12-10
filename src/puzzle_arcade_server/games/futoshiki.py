@@ -3,7 +3,10 @@
 import random
 from typing import Any
 
+from puzzle_arcade_server.models.enums import DifficultyLevel
+
 from ..base.puzzle_game import PuzzleGame
+from ..models import FutoshikiConfig, MoveResult
 
 
 class FutoshikiGame(PuzzleGame):
@@ -21,8 +24,9 @@ class FutoshikiGame(PuzzleGame):
         """
         super().__init__(difficulty)
 
-        # Grid size based on difficulty
-        self.size = {"easy": 4, "medium": 5, "hard": 6}.get(difficulty, 4)
+        # Use pydantic config based on difficulty
+        self.config = FutoshikiConfig.from_difficulty(self.difficulty)
+        self.size = self.config.size
 
         self.grid = [[0 for _ in range(self.size)] for _ in range(self.size)]
         self.solution = [[0 for _ in range(self.size)] for _ in range(self.size)]
@@ -109,9 +113,12 @@ class FutoshikiGame(PuzzleGame):
         self.inequalities = []
 
         # Determine number of inequalities based on difficulty
-        num_inequalities = {"easy": self.size * 2, "medium": self.size * 3, "hard": self.size * 4}.get(
-            self.difficulty, self.size * 2
-        )
+        num_inequalities_map = {
+            DifficultyLevel.EASY: self.size * 2,
+            DifficultyLevel.MEDIUM: self.size * 3,
+            DifficultyLevel.HARD: self.size * 4,
+        }
+        num_inequalities = num_inequalities_map[self.difficulty]
 
         # Collect all possible adjacent pairs
         possible_pairs = []
@@ -138,7 +145,7 @@ class FutoshikiGame(PuzzleGame):
             else:
                 self.inequalities.append(((r2, c2), (r1, c1)))
 
-    def generate_puzzle(self) -> None:
+    async def generate_puzzle(self) -> None:
         """Generate a new Futoshiki puzzle."""
         # Generate a valid Latin square as solution
         self.grid = [[0 for _ in range(self.size)] for _ in range(self.size)]
@@ -161,9 +168,12 @@ class FutoshikiGame(PuzzleGame):
         self._generate_inequalities()
 
         # Remove some cells based on difficulty
-        cells_to_remove = {"easy": self.size * 2, "medium": self.size * 3, "hard": self.size * 4}.get(
-            self.difficulty, self.size * 2
-        )
+        cells_to_remove_map = {
+            DifficultyLevel.EASY: self.size * 2,
+            DifficultyLevel.MEDIUM: self.size * 3,
+            DifficultyLevel.HARD: self.size * 4,
+        }
+        cells_to_remove = cells_to_remove_map[self.difficulty]
 
         # Copy solution to grid
         self.grid = [row[:] for row in self.solution]
@@ -179,7 +189,7 @@ class FutoshikiGame(PuzzleGame):
         self.moves_made = 0
         self.game_started = True
 
-    def validate_move(self, row: int, col: int, num: int) -> tuple[bool, str]:
+    async def validate_move(self, row: int, col: int, num: int) -> MoveResult:
         """Place a number on the grid.
 
         Args:
@@ -188,7 +198,7 @@ class FutoshikiGame(PuzzleGame):
             num: Number to place (1 to self.size, or 0 to clear)
 
         Returns:
-            Tuple of (success, message)
+            MoveResult with success status and message
         """
         # Convert to 0-indexed
         row -= 1
@@ -196,20 +206,20 @@ class FutoshikiGame(PuzzleGame):
 
         # Validate coordinates
         if not (0 <= row < self.size and 0 <= col < self.size):
-            return False, f"Invalid coordinates. Use row and column between 1-{self.size}."
+            return MoveResult(success=False, message=f"Invalid coordinates. Use row and column between 1-{self.size}.")
 
         # Check if this cell is part of the initial puzzle
         if self.initial_grid[row][col] != 0:
-            return False, "Cannot modify initial puzzle cells."
+            return MoveResult(success=False, message="Cannot modify initial puzzle cells.")
 
         # Clear the cell
         if num == 0:
             self.grid[row][col] = 0
-            return True, "Cell cleared."
+            return MoveResult(success=True, message="Cell cleared.", state_changed=True)
 
         # Validate number
         if not (1 <= num <= self.size):
-            return False, f"Invalid number. Use 1-{self.size} or 0 to clear."
+            return MoveResult(success=False, message=f"Invalid number. Use 1-{self.size} or 0 to clear.")
 
         # Check if the move is valid
         old_value = self.grid[row][col]
@@ -217,10 +227,12 @@ class FutoshikiGame(PuzzleGame):
 
         if not self.is_valid_move(row, col, num):
             self.grid[row][col] = old_value
-            return False, "Invalid move! This violates uniqueness or inequality constraints."
+            return MoveResult(
+                success=False, message="Invalid move! This violates uniqueness or inequality constraints."
+            )
 
         self.moves_made += 1
-        return True, "Number placed successfully!"
+        return MoveResult(success=True, message="Number placed successfully!", state_changed=True)
 
     def is_complete(self) -> bool:
         """Check if the puzzle is complete and correct."""
@@ -232,7 +244,7 @@ class FutoshikiGame(PuzzleGame):
                     return False
         return True
 
-    def get_hint(self) -> tuple[Any, str] | None:
+    async def get_hint(self) -> tuple[Any, str] | None:
         """Get a hint for the next move.
 
         Returns:

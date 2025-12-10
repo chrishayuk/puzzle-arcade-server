@@ -4,6 +4,7 @@ import random
 from typing import Any
 
 from ..base.puzzle_game import PuzzleGame
+from ..models import ArithmeticOperation, Cage, KenKenConfig, MoveResult
 
 
 class KenKenGame(PuzzleGame):
@@ -22,16 +23,15 @@ class KenKenGame(PuzzleGame):
         super().__init__(difficulty)
 
         # Grid size based on difficulty
-        self.size = {"easy": 4, "medium": 5, "hard": 6}.get(difficulty, 4)
+        self.config = KenKenConfig.from_difficulty(self.difficulty)
+        self.size = self.config.size
 
         self.grid = [[0 for _ in range(self.size)] for _ in range(self.size)]
         self.solution = [[0 for _ in range(self.size)] for _ in range(self.size)]
         self.initial_grid = [[0 for _ in range(self.size)] for _ in range(self.size)]
 
-        # Cages: list of (cells, operation, target)
-        # cells = [(row, col), ...]
-        # operation = '+', '-', '*', '/', or None (for single cell)
-        self.cages: list[tuple[list[tuple[int, int]], str | None, int]] = []
+        # Cages: list of Cage objects
+        self.cages: list[Cage] = []
 
     @property
     def name(self) -> str:
@@ -106,12 +106,12 @@ class KenKenGame(PuzzleGame):
             True if cage constraints are satisfied or could be satisfied
         """
         # Find which cage contains this cell
-        for cells, operation, target in self.cages:
-            if (row, col) not in cells:
+        for cage in self.cages:
+            if (row, col) not in cage.cells:
                 continue
 
             # Get all values in the cage
-            cage_values = [grid[r][c] for r, c in cells]
+            cage_values = [grid[r][c] for r, c in cage.cells]
 
             # If cage is not fully filled, we can only do partial checking
             if 0 in cage_values:
@@ -120,42 +120,42 @@ class KenKenGame(PuzzleGame):
                 continue
 
             # All cells filled - check if operation gives target
-            if not self._evaluate_cage(cage_values, operation, target):
+            if not self._evaluate_cage(cage_values, cage.operation, cage.target):
                 return False
 
         return True
 
-    def _evaluate_cage(self, values: list[int], operation: str | None, target: int) -> bool:
+    def _evaluate_cage(self, values: list[int], operation: ArithmeticOperation | None, target: int) -> bool:
         """Check if the cage operation evaluates to the target.
 
         Args:
             values: List of values in the cage
-            operation: Operation to perform (+, -, *, /, or None)
+            operation: Operation to perform
             target: Target value
 
         Returns:
             True if operation on values equals target
         """
-        if operation is None:
+        if operation is None or operation == ArithmeticOperation.NONE:
             # Single cell cage
             return len(values) == 1 and values[0] == target
 
-        if operation == "+":
+        if operation == ArithmeticOperation.ADD:
             return sum(values) == target
 
-        if operation == "*":
+        if operation == ArithmeticOperation.MULTIPLY:
             result = 1
             for v in values:
                 result *= v
             return result == target
 
-        if operation == "-":
+        if operation == ArithmeticOperation.SUBTRACT:
             # Subtraction: target = larger - smaller (for 2 cells)
             if len(values) != 2:
                 return False
             return abs(values[0] - values[1]) == target
 
-        if operation == "/":
+        if operation == ArithmeticOperation.DIVIDE:
             # Division: target = larger / smaller (for 2 cells)
             if len(values) != 2:
                 return False
@@ -204,32 +204,37 @@ class KenKenGame(PuzzleGame):
                 else:
                     # Choose operation based on cage size
                     if len(cells) == 2:
-                        operations = ["+", "-", "*", "/"]
+                        operations = [
+                            ArithmeticOperation.ADD,
+                            ArithmeticOperation.SUBTRACT,
+                            ArithmeticOperation.MULTIPLY,
+                            ArithmeticOperation.DIVIDE,
+                        ]
                     else:
-                        operations = ["+", "*"]
+                        operations = [ArithmeticOperation.ADD, ArithmeticOperation.MULTIPLY]
 
                     operation = random.choice(operations)
 
-                    if operation == "+":
+                    if operation == ArithmeticOperation.ADD:
                         target = sum(cage_values)
-                    elif operation == "*":
+                    elif operation == ArithmeticOperation.MULTIPLY:
                         target = 1
                         for v in cage_values:
                             target *= v
-                    elif operation == "-":
+                    elif operation == ArithmeticOperation.SUBTRACT:
                         target = abs(cage_values[0] - cage_values[1])
-                    elif operation == "/":
+                    elif operation == ArithmeticOperation.DIVIDE:
                         a, b = sorted(cage_values, reverse=True)
                         if b == 0 or a % b != 0:
                             # Fallback to addition if division doesn't work
-                            operation = "+"
+                            operation = ArithmeticOperation.ADD
                             target = sum(cage_values)
                         else:
                             target = a // b
 
-                self.cages.append((cells, operation, target))
+                self.cages.append(Cage(cells=cells, operation=operation, target=target))
 
-    def generate_puzzle(self) -> None:
+    async def generate_puzzle(self) -> None:
         """Generate a new KenKen puzzle."""
         # Generate a valid Latin square as solution
         self.grid = [[0 for _ in range(self.size)] for _ in range(self.size)]
@@ -257,7 +262,7 @@ class KenKenGame(PuzzleGame):
         self.moves_made = 0
         self.game_started = True
 
-    def validate_move(self, row: int, col: int, num: int) -> tuple[bool, str]:
+    async def validate_move(self, row: int, col: int, num: int) -> MoveResult:
         """Place a number on the grid.
 
         Args:
@@ -266,7 +271,7 @@ class KenKenGame(PuzzleGame):
             num: Number to place (1 to self.size, or 0 to clear)
 
         Returns:
-            Tuple of (success, message)
+            MoveResult indicating success/failure and message
         """
         # Convert to 0-indexed
         row -= 1
@@ -274,16 +279,16 @@ class KenKenGame(PuzzleGame):
 
         # Validate coordinates
         if not (0 <= row < self.size and 0 <= col < self.size):
-            return False, f"Invalid coordinates. Use row and column between 1-{self.size}."
+            return MoveResult(success=False, message=f"Invalid coordinates. Use row and column between 1-{self.size}.")
 
         # Clear the cell
         if num == 0:
             self.grid[row][col] = 0
-            return True, "Cell cleared."
+            return MoveResult(success=True, message="Cell cleared.", state_changed=True)
 
         # Validate number
         if not (1 <= num <= self.size):
-            return False, f"Invalid number. Use 1-{self.size} or 0 to clear."
+            return MoveResult(success=False, message=f"Invalid number. Use 1-{self.size} or 0 to clear.")
 
         # Check if the move is valid
         old_value = self.grid[row][col]
@@ -291,10 +296,10 @@ class KenKenGame(PuzzleGame):
 
         if not self.is_valid_move(row, col, num):
             self.grid[row][col] = old_value
-            return False, "Invalid move! This number already exists in the row or column."
+            return MoveResult(success=False, message="Invalid move! This number already exists in the row or column.")
 
         self.moves_made += 1
-        return True, "Number placed successfully!"
+        return MoveResult(success=True, message="Number placed successfully!", state_changed=True)
 
     def is_complete(self) -> bool:
         """Check if the puzzle is complete and correct."""
@@ -305,14 +310,14 @@ class KenKenGame(PuzzleGame):
                     return False
 
         # Check all cages
-        for cells, operation, target in self.cages:
-            cage_values = [self.grid[r][c] for r, c in cells]
-            if not self._evaluate_cage(cage_values, operation, target):
+        for cage in self.cages:
+            cage_values = [self.grid[r][c] for r, c in cage.cells]
+            if not self._evaluate_cage(cage_values, cage.operation, cage.target):
                 return False
 
         return True
 
-    def get_hint(self) -> tuple[Any, str] | None:
+    async def get_hint(self) -> tuple[Any, str] | None:
         """Get a hint for the next move.
 
         Returns:
@@ -337,15 +342,15 @@ class KenKenGame(PuzzleGame):
 
         # Create a cage ID map for rendering
         cage_map = {}
-        for cage_id, (cells, operation, target) in enumerate(self.cages):
-            for r, c in cells:
-                cage_map[(r, c)] = (cage_id, operation, target)
+        for cage_id, cage in enumerate(self.cages):
+            for r, c in cage.cells:
+                cage_map[(r, c)] = (cage_id, cage.operation, cage.target)
 
         # Determine cell width needed (accommodate cage labels)
         max_label_len = 0
-        for _cells, operation, target in self.cages:
-            op_str = operation if operation else ""
-            label_len = len(f"{target}{op_str}")
+        for cage in self.cages:
+            op_str = cage.operation.value if cage.operation else ""
+            label_len = len(f"{cage.target}{op_str}")
             max_label_len = max(max_label_len, label_len)
 
         # Cell width: 1 (space) + 1 (digit/.) + max_label_len, minimum 4
@@ -379,9 +384,9 @@ class KenKenGame(PuzzleGame):
                     cage_id, operation, target = cage_map.get((row, col), (None, None, None))
                     if cage_id is not None:
                         # Check if this is the first cell of the cage
-                        cage_cells = self.cages[cage_id][0]
+                        cage_cells = self.cages[cage_id].cells
                         if (row, col) == min(cage_cells):
-                            op_str = operation if operation else ""
+                            op_str = operation.value if operation else ""
                             cage_label = f"{target}{op_str}"
                             cell_content = f"{cell_content}{cage_label}"
 
@@ -393,10 +398,10 @@ class KenKenGame(PuzzleGame):
 
         # Show cage legend
         lines.append("\nCages:")
-        for _cage_id, (cells, operation, target) in enumerate(self.cages):
-            op_str = operation if operation else ""
-            cells_str = ", ".join(f"({r + 1},{c + 1})" for r, c in sorted(cells))
-            lines.append(f"  {target}{op_str}: {cells_str}")
+        for _cage_id, cage in enumerate(self.cages):
+            op_str = cage.operation.value if cage.operation else ""
+            cells_str = ", ".join(f"({r + 1},{c + 1})" for r, c in sorted(cage.cells))
+            lines.append(f"  {cage.target}{op_str}: {cells_str}")
 
         return "\n".join(lines)
 

@@ -3,7 +3,10 @@
 import random
 from typing import Any
 
+from puzzle_arcade_server.models.enums import DifficultyLevel
+
 from ..base.puzzle_game import PuzzleGame
+from ..models import MoveResult, NonogramConfig
 
 
 class NonogramGame(PuzzleGame):
@@ -17,12 +20,13 @@ class NonogramGame(PuzzleGame):
         """Initialize a new Nonogram game.
 
         Args:
-            difficulty: Game difficulty level (easy=5x5, medium=8x8, hard=10x10)
+            difficulty: Game difficulty level (easy=5x5, medium=7x7, hard=10x10)
         """
         super().__init__(difficulty)
 
-        # Grid size based on difficulty
-        self.size = {"easy": 5, "medium": 8, "hard": 10}.get(difficulty, 5)
+        # Use pydantic config based on difficulty
+        self.config = NonogramConfig.from_difficulty(self.difficulty)
+        self.size = self.config.size
 
         # Grid: -1 = unknown, 0 = empty (marked X), 1 = filled (marked ■)
         self.grid = [[-1 for _ in range(self.size)] for _ in range(self.size)]
@@ -70,13 +74,18 @@ class NonogramGame(PuzzleGame):
     def _generate_pattern(self) -> None:
         """Generate a random pattern for the solution."""
         # Create a simple random pattern
-        density = {"easy": 0.4, "medium": 0.5, "hard": 0.6}.get(self.difficulty, 0.4)
+        density_map = {
+            DifficultyLevel.EASY: 0.4,
+            DifficultyLevel.MEDIUM: 0.5,
+            DifficultyLevel.HARD: 0.6,
+        }
+        density = density_map[self.difficulty]
 
         for row in range(self.size):
             for col in range(self.size):
                 self.solution[row][col] = 1 if random.random() < density else 0
 
-    def generate_puzzle(self) -> None:
+    async def generate_puzzle(self) -> None:
         """Generate a new Nonogram puzzle."""
         # Generate a random pattern
         self._generate_pattern()
@@ -99,7 +108,7 @@ class NonogramGame(PuzzleGame):
         self.moves_made = 0
         self.game_started = True
 
-    def validate_move(self, row: int, col: int, value: int) -> tuple[bool, str]:
+    async def validate_move(self, row: int, col: int, value: int) -> MoveResult:
         """Mark a cell on the grid.
 
         Args:
@@ -108,7 +117,7 @@ class NonogramGame(PuzzleGame):
             value: Value to place (0=empty/X, 1=filled/■, -1=unknown/clear)
 
         Returns:
-            Tuple of (success, message)
+            MoveResult with success status and message
         """
         # Convert to 0-indexed
         row -= 1
@@ -116,15 +125,15 @@ class NonogramGame(PuzzleGame):
 
         # Validate coordinates
         if not (0 <= row < self.size and 0 <= col < self.size):
-            return False, f"Invalid coordinates. Use row and column between 1-{self.size}."
+            return MoveResult(success=False, message=f"Invalid coordinates. Use row and column between 1-{self.size}.")
 
         # Validate value
         if value not in [-1, 0, 1]:
-            return False, "Invalid value. Use 1 (filled), 0 (empty), or -1 (clear)."
+            return MoveResult(success=False, message="Invalid value. Use 1 (filled), 0 (empty), or -1 (clear).")
 
         self.grid[row][col] = value
         self.moves_made += 1
-        return True, "Cell marked successfully!"
+        return MoveResult(success=True, message="Cell marked successfully!", state_changed=True)
 
     def is_complete(self) -> bool:
         """Check if the puzzle is complete and correct."""
@@ -138,7 +147,7 @@ class NonogramGame(PuzzleGame):
 
         return True
 
-    def get_hint(self) -> tuple[Any, str] | None:
+    async def get_hint(self) -> tuple[Any, str] | None:
         """Get a hint for the next move.
 
         Returns:
