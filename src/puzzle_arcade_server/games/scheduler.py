@@ -103,7 +103,7 @@ class SchedulerGame(PuzzleGame):
                 if in_degree[dependent] == 0:
                     queue.append(dependent)
 
-        # Schedule tasks greedily
+        # Schedule tasks greedily with proper dependency handling
         worker_available = [0] * self.num_workers
         self.optimal_schedule = {}
 
@@ -111,16 +111,34 @@ class SchedulerGame(PuzzleGame):
         sorted_tasks = sorted(range(self.num_tasks), key=lambda t: earliest_start[t])
 
         for task_id in sorted_tasks:
-            # Find earliest available worker
-            earliest_worker = min(range(self.num_workers), key=lambda w: worker_available[w])
-            start_time = max(worker_available[earliest_worker], earliest_start[task_id])
+            # Calculate actual earliest start based on scheduled dependencies
+            actual_earliest_start = 0
+            for dep_task, dependent in self.dependencies:
+                if dependent == task_id and dep_task in self.optimal_schedule:
+                    dep_worker, dep_start = self.optimal_schedule[dep_task]
+                    dep_end = dep_start + self.tasks[dep_task].duration
+                    actual_earliest_start = max(actual_earliest_start, dep_end)
+
+            # Find the worker that can start this task earliest
+            # considering both worker availability and actual dependency finish times
+            best_worker = 0
+            best_start_time = max(worker_available[0], actual_earliest_start)
+
+            for worker_id in range(1, self.num_workers):
+                # This task can't start before its dependencies finish
+                # and can't start before the worker is available
+                candidate_start = max(worker_available[worker_id], actual_earliest_start)
+
+                if candidate_start < best_start_time:
+                    best_start_time = candidate_start
+                    best_worker = worker_id
 
             # Store 1-indexed worker_id for consistency
-            self.optimal_schedule[task_id] = (earliest_worker + 1, start_time)
-            worker_available[earliest_worker] = start_time + self.tasks[task_id].duration
+            self.optimal_schedule[task_id] = (best_worker + 1, best_start_time)
+            worker_available[best_worker] = best_start_time + self.tasks[task_id].duration
 
         # Calculate makespan
-        self.optimal_makespan = max(worker_available)
+        self.optimal_makespan = max(worker_available) if worker_available else 0
 
     async def validate_move(self, task_id: int | str, worker_id: int, start_time: int) -> MoveResult:
         """Assign a task to a worker at a specific start time, or unassign a task.

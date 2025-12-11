@@ -26,6 +26,7 @@ class GameCommand(str, Enum):
     SOLVE = "solve"
     MENU = "menu"
     M = "m"
+    MODE = "mode"
     # Game-specific commands
     PLACE = "place"
     CLEAR = "clear"
@@ -101,3 +102,11 @@ class ConnectionState(IntEnum):
     UNKNOWN = 0
     DISCONNECTED = 1
     CONNECTED = 2
+
+
+class OutputMode(str, Enum):
+    """Output mode for the server."""
+
+    NORMAL = "normal"
+    AGENT = "agent"
+    COMPACT = "compact"

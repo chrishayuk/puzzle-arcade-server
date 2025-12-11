@@ -7,7 +7,7 @@
 [![Pydantic v2](https://img.shields.io/badge/pydantic-v2-purple.svg)](https://docs.pydantic.dev/)
 [![Type Checked](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](http://mypy-lang.org/)
 
-A multi-game puzzle server hosting 16 different logic puzzle types, built using the [chuk-protocol-server](https://github.com/chrishayuk/chuk-protocol-server) framework. Perfect for demonstrating LLM reasoning capabilities and constraint solver generality!
+A multi-game puzzle server hosting 19 different logic puzzle types, built using the [chuk-protocol-server](https://github.com/chrishayuk/chuk-protocol-server) framework. Perfect for demonstrating LLM reasoning capabilities and constraint solver generality!
 
 ## Try It Now
 
@@ -25,11 +25,15 @@ Once connected, type `help` to see available games, or `sudoku easy` to start pl
 
 ## Features
 
-- **16 Puzzle Games** with three difficulty levels each (easy, medium, hard)
+- **19 Puzzle Games** with three difficulty levels each (easy, medium, hard)
   - **7 Classic Logic Puzzles** - Sudoku, KenKen, Kakuro, Binary, Futoshiki, Nonogram, Logic Grid
-  - **4 Advanced CP-SAT Puzzles** - Killer Sudoku, Lights Out, Mastermind, Slitherlink
+  - **7 Advanced CP-SAT Puzzles** - Killer Sudoku, Lights Out, Mastermind, Slitherlink, Bridges, Hitori, Shikaku
   - **2 Optimization Challenges** - Knapsack, Task Scheduler
   - **3 Advanced Reasoning Puzzles** - Nurikabe, Einstein's Puzzle, Minesweeper
+- **Agent-Friendly Mode** - Structured output with clear markers for AI agents and tools
+  - Enable with `mode agent` command
+  - Machine-parseable grid format with clear start/end markers
+  - Compact output optimized for LLM tool integration
 - **Multiple transport protocols:**
   - **Telnet** (port 8023) - Classic telnet protocol
   - **TCP** (port 8024) - Raw TCP connections
@@ -39,7 +43,7 @@ Once connected, type `help` to see available games, or `sudoku easy` to start pl
 - **Hint system** for when you're stuck
 - **Solution checker** and auto-solver for all games
 - **Clean ASCII art grids** - perfectly aligned for easy parsing
-- **Comprehensive test suite** (450 tests, 95% coverage)
+- **Comprehensive test suite** (530 tests, 95% coverage)
 - **Modern Python best practices:**
   - **Pydantic v2 native** - All models use ConfigDict for type safety
   - **Async native** - Full async/await support throughout
@@ -70,6 +74,9 @@ Once connected, type `help` to see available games, or `sudoku easy` to start pl
 | **Lights Out** | 5×5 to 7×7 | Boolean XOR constraints (SAT) | ✅ Complete |
 | **Mastermind** | 4-6 pegs | Deduction + Feedback constraints | ✅ Complete |
 | **Slitherlink** | 5×5 to 10×10 | Global loop + Edge constraints | ✅ Complete |
+| **Bridges** | 7×7 to 11×11 | Connectivity + Degree constraints | ✅ Complete |
+| **Hitori** | 5×5 to 9×9 | AllDifferent + Adjacency + Connectivity | ✅ Complete |
+| **Shikaku** | 6×6 to 10×10 | Area partitioning + Rectangle covering | ✅ Complete |
 
 ### Optimization Challenges
 
@@ -215,15 +222,18 @@ ADVANCED CP-SAT PUZZLES:
   9) Lights Out      - Toggle lights to turn all off - XOR constraint puzzle
  10) Mastermind      - Code-breaking with logical deduction and feedback
  11) Slitherlink     - Draw a single loop - numbers show edge counts
+ 12) Bridges         - Connect islands with bridges - satisfy all numbers
+ 13) Hitori          - Shade cells to eliminate duplicates - no adjacent shading
+ 14) Shikaku         - Divide grid into rectangles matching areas
 
 OPTIMIZATION CHALLENGES:
- 12) Knapsack        - Maximize value within capacity constraints
- 13) Task Scheduler  - Minimize makespan with dependencies and resources
+ 15) Knapsack        - Maximize value within capacity constraints
+ 16) Task Scheduler  - Minimize makespan with dependencies and resources
 
 ADVANCED REASONING PUZZLES:
- 14) Nurikabe        - Island and sea puzzle - connectivity constraints
- 15) Einstein's Puzzle - Who owns the fish? Multi-attribute deduction
- 16) Minesweeper     - Find all mines using logical deduction
+ 17) Nurikabe        - Island and sea puzzle - connectivity constraints
+ 18) Einstein's Puzzle - Who owns the fish? Multi-attribute deduction
+ 19) Minesweeper     - Find all mines using logical deduction
 
 Commands:
   <number>  - Select game by number
@@ -233,6 +243,45 @@ Commands:
 ==================================================
 ```
 
+## Agent-Friendly Mode
+
+The server includes a special **agent mode** designed for AI tools and LLM integration:
+
+### Enabling Agent Mode
+
+```
+> mode agent
+Output mode set to: agent
+```
+
+### Agent Mode Features
+
+**Structured Output** - Grid data is wrapped with clear start/end markers:
+```
+---GAME-START---
+GAME: Sudoku
+DIFFICULTY: medium
+MOVES: 3
+---GRID-START---
+  | 1 2 3 | 4 5 6 | 7 8 9 |
+  -------------------------
+1 | . . 3 | . 2 . | 6 . . |
+...
+---GRID-END---
+---GAME-END---
+```
+
+**Benefits for AI Agents:**
+- Easy parsing with regex: `---GRID-START---(.*?)---GRID-END---`
+- Consistent metadata format (GAME, DIFFICULTY, MOVES)
+- No decorative text or banners to filter out
+- Minimal token usage compared to normal mode
+
+**Switching Modes:**
+- `mode normal` - Human-friendly output (default)
+- `mode agent` - Machine-parseable structured output
+- `mode compact` - Reserved for future use
+
 ## Universal Game Commands
 
 All games support these commands:
@@ -241,6 +290,7 @@ All games support these commands:
 - `<number> [difficulty]` - Select game by number (e.g., `1 medium`)
 - `<name> [difficulty]` - Select game by name (e.g., `sudoku hard`)
 - `show` - Display the current grid
+- `mode <normal|agent|compact>` - Set output mode
 - `help` - Show game-specific commands and rules
 - `menu` - Return to main menu
 - `quit` - Exit the server
@@ -405,7 +455,7 @@ pip install -e ".[dev]"
 
 ### Testing
 
-The project has comprehensive test coverage (95%, 450 tests):
+The project has comprehensive test coverage (95%, 530 tests):
 
 ```bash
 # Run all tests
@@ -442,6 +492,9 @@ src/puzzle_arcade_server/games/kakuro.py           95%
 src/puzzle_arcade_server/games/nonogram.py         93%
 src/puzzle_arcade_server/games/minesweeper.py      92%
 src/puzzle_arcade_server/games/sudoku.py           92%
+src/puzzle_arcade_server/games/hitori.py           95%
+src/puzzle_arcade_server/games/bridges.py          93%
+src/puzzle_arcade_server/games/shikaku.py          93%
 src/puzzle_arcade_server/games/nurikabe.py         92%
 src/puzzle_arcade_server/games/kenken.py           91%
 src/puzzle_arcade_server/games/logic_grid.py       91%
@@ -470,11 +523,11 @@ The project follows modern Python best practices with a **9.8/10 compliance scor
 - ✅ **Test Coverage** (10/10) - 95% overall, all files ≥90%
 
 #### Quality Metrics
-- **450 tests** - All passing ✅
+- **530 tests** - All passing ✅
 - **95% coverage** - Exceeds 90% threshold ✅
 - **Zero linting errors** - Clean codebase ✅
 - **Full type safety** - MyPy passes ✅
-- **2,852 statements** - Well-tested and documented
+- **3,700+ statements** - Well-tested and documented
 
 ```bash
 # Run all checks (lint + typecheck + test + security)
@@ -611,6 +664,9 @@ puzzle-arcade-server/
 │       │   ├── lights_out.py     # Lights Out (5×5-7×7, 204 lines, 94% coverage)
 │       │   ├── mastermind.py     # Mastermind (4-6 pegs, 258 lines, 92% coverage)
 │       │   ├── slitherlink.py    # Slitherlink (5×5-10×10, 343 lines, 91% coverage)
+│       │   ├── bridges.py        # Bridges (7×7-11×11, 337 lines, 93% coverage)
+│       │   ├── hitori.py         # Hitori (5×5-9×9, 329 lines, 95% coverage)
+│       │   ├── shikaku.py        # Shikaku (6×6-10×10, 306 lines, 93% coverage)
 │       │   ├── knapsack.py       # Knapsack (5-12 items, 267 lines)
 │       │   ├── scheduler.py      # Task Scheduler (4-8 tasks, 381 lines)
 │       │   ├── nurikabe.py       # Nurikabe (6×6-10×10, 383 lines)
@@ -631,6 +687,9 @@ puzzle-arcade-server/
 │   ├── test_lights_out.py        # Lights Out tests (23 tests)
 │   ├── test_mastermind.py        # Mastermind tests (31 tests)
 │   ├── test_slitherlink.py       # Slitherlink tests (33 tests)
+│   ├── test_bridges.py           # Bridges tests (24 tests)
+│   ├── test_hitori.py            # Hitori tests (29 tests)
+│   ├── test_shikaku.py           # Shikaku tests (27 tests)
 │   ├── test_knapsack.py          # Knapsack tests (30+ tests)
 │   ├── test_scheduler.py         # Scheduler tests (35+ tests)
 │   ├── test_nurikabe.py          # Nurikabe tests (40+ tests)
@@ -657,15 +716,16 @@ puzzle-arcade-server/
 
 ### Key Statistics
 
-- **Total Lines of Code**: 2,852 statements in src/
-- **Test Coverage**: 95% overall (450 tests, all passing)
+- **Total Lines of Code**: 3,700+ statements in src/
+- **Test Coverage**: 95% overall (530 tests, all passing)
 - **Code Quality Score**: 9.8/10 (near perfect compliance)
-- **Games Implemented**: 16 complete puzzle types
+- **Games Implemented**: 19 complete puzzle types
   - 7 Classic Logic Puzzles
-  - 4 Advanced CP-SAT Puzzles
+  - 7 Advanced CP-SAT Puzzles
   - 2 Optimization Challenges
   - 3 Advanced Reasoning Puzzles
 - **Supported Transports**: 4 (Telnet, TCP, WebSocket, WS-Telnet)
+- **Agent-Friendly Mode**: Structured output for AI tools
 - **Make Targets**: 50+ development commands
 - **All Files**: ≥90% test coverage ✅
 
@@ -696,7 +756,7 @@ Test the generality of constraint solvers (like MCP solvers):
 
 Learn about constraint satisfaction problems:
 
-- **16 different puzzle types** demonstrating various constraint types:
+- **19 different puzzle types** demonstrating various constraint types:
   - AllDifferent constraints (Sudoku, KenKen, Futoshiki)
   - Arithmetic constraints (KenKen, Kakuro, Killer Sudoku)
   - Boolean/SAT constraints (Lights Out, Binary Puzzle)
@@ -708,7 +768,7 @@ Learn about constraint satisfaction problems:
   - Probabilistic reasoning (Minesweeper)
   - And more!
 - **Well-documented code** showing puzzle generation algorithms
-- **Comprehensive tests** (450 tests, 95% coverage) demonstrating validation
+- **Comprehensive tests** (530 tests, 95% coverage) demonstrating validation
 - **Production-ready** - 9.8/10 code quality score
 - **Type-safe** - Full Pydantic v2 and MyPy compliance
 - **Clean architecture** for adding new puzzles

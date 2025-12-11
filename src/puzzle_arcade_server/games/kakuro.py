@@ -199,7 +199,7 @@ class KakuroGame(PuzzleGame):
             (r, c)
             for r in range(self.size)
             for c in range(self.size)
-            if self.grid[r][c] == 0  # Empty white cell
+            if self.grid[r][c] == 0 and self.solution[r][c] > 0  # Empty white cell with valid solution
         ]
         if not empty_cells:
             return None

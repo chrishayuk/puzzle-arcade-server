@@ -19,7 +19,7 @@ from chuk_protocol_server.servers.telnet_server import TelnetServer
 
 from .base.puzzle_game import PuzzleGame
 from .games import AVAILABLE_GAMES
-from .models import DifficultyLevel, GameCommand
+from .models import DifficultyLevel, GameCommand, OutputMode
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -35,6 +35,7 @@ class ArcadeHandler(TelnetHandler):
         await super().on_connect()
         self.current_game: PuzzleGame | None = None
         self.in_menu = True
+        self.output_mode = OutputMode.NORMAL
 
     async def show_main_menu(self) -> None:
         """Display the main game selection menu."""
@@ -135,17 +136,31 @@ class ArcadeHandler(TelnetHandler):
             await self.send_line("No game in progress. Type 'menu' to select a game.")
             return
 
-        await self.send_line("")
-        await self.send_line("=" * 50)
+        if self.output_mode == OutputMode.AGENT:
+            # Agent-friendly output with clear markers
+            await self.send_line("---GAME-START---")
+            await self.send_line(f"GAME: {self.current_game.name}")
+            await self.send_line(f"DIFFICULTY: {self.current_game.difficulty.value}")
+            await self.send_line(f"MOVES: {self.current_game.moves_made}")
+            await self.send_line("---GRID-START---")
+            grid_lines = self.current_game.render_grid().rstrip("\n").split("\n")
+            for line in grid_lines:
+                await self.send_line(line)
+            await self.send_line("---GRID-END---")
+            await self.send_line("---GAME-END---")
+        else:
+            # Normal human-friendly output
+            await self.send_line("")
+            await self.send_line("=" * 50)
 
-        # Send grid line by line, stripping trailing empty lines
-        grid_lines = self.current_game.render_grid().rstrip("\n").split("\n")
-        for line in grid_lines:
-            await self.send_line(line)
+            # Send grid line by line, stripping trailing empty lines
+            grid_lines = self.current_game.render_grid().rstrip("\n").split("\n")
+            for line in grid_lines:
+                await self.send_line(line)
 
-        await self.send_line(self.current_game.get_stats())
-        await self.send_line("=" * 50)
-        await self.send_line("")
+            await self.send_line(self.current_game.get_stats())
+            await self.send_line("=" * 50)
+            await self.send_line("")
 
     async def handle_menu_command(self, command: str) -> None:
         """Process a command when in the main menu.
@@ -238,6 +253,20 @@ class ArcadeHandler(TelnetHandler):
 
         if cmd_enum in (GameCommand.SHOW, GameCommand.S):
             await self.display_puzzle()
+            return
+
+        if cmd_enum == GameCommand.MODE:
+            if len(parts) != 2:
+                await self.send_line("Usage: mode <normal|agent|compact>")
+                return
+
+            mode_str = parts[1].lower()
+            try:
+                new_mode = OutputMode(mode_str)
+                self.output_mode = new_mode
+                await self.send_line(f"Output mode set to: {new_mode.value}")
+            except ValueError:
+                await self.send_line(f"Invalid mode '{mode_str}'. Choose: normal, agent, or compact")
             return
 
         if cmd_enum == GameCommand.HINT:

@@ -28,6 +28,7 @@ from .enums import (
     KnapsackAction,
     MinesweeperAction,
     NurikabeColor,
+    OutputMode,
     SchedulerAction,
 )
 from .games import Cage, HouseAssignment, Item, LogicGridCategories, PersonAttributes, Task
@@ -42,6 +43,7 @@ __all__ = [
     "KnapsackAction",
     "MinesweeperAction",
     "NurikabeColor",
+    "OutputMode",
     "SchedulerAction",
     # Base models
     "MoveResult",

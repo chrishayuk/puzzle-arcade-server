@@ -1,8 +1,10 @@
 """Puzzle game implementations."""
 
 from .binary import BinaryPuzzleGame
+from .bridges import BridgesGame
 from .einstein import EinsteinGame
 from .futoshiki import FutoshikiGame
+from .hitori import HitoriGame
 from .kakuro import KakuroGame
 from .kenken import KenKenGame
 from .killer_sudoku import KillerSudokuGame
@@ -14,6 +16,7 @@ from .minesweeper import MinesweeperGame
 from .nonogram import NonogramGame
 from .nurikabe import NurikabeGame
 from .scheduler import SchedulerGame
+from .shikaku import ShikakuGame
 from .slitherlink import SlitherlinkGame
 from .sudoku import SudokuGame
 
@@ -32,6 +35,9 @@ AVAILABLE_GAMES = {
     "lights": LightsOutGame,
     "mastermind": MastermindGame,
     "slither": SlitherlinkGame,
+    "bridges": BridgesGame,
+    "hitori": HitoriGame,
+    "shikaku": ShikakuGame,
     # Optimization Challenges
     "knapsack": KnapsackGame,
     "scheduler": SchedulerGame,
@@ -46,12 +52,15 @@ __all__ = [
     "KenKenGame",
     "KakuroGame",
     "BinaryPuzzleGame",
+    "BridgesGame",
     "FutoshikiGame",
+    "HitoriGame",
     "NonogramGame",
     "LogicGridGame",
     "KillerSudokuGame",
     "LightsOutGame",
     "MastermindGame",
+    "ShikakuGame",
     "SlitherlinkGame",
     "KnapsackGame",
     "SchedulerGame",
