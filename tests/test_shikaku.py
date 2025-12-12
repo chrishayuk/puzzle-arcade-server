@@ -371,3 +371,28 @@ class TestShikakuGame:
         # Should cover all cells
         total_cells = game.size * game.size
         assert len(covered_cells) == total_cells
+
+    async def test_constraint_types(self):
+        """Test constraint types metadata."""
+        game = ShikakuGame("easy")
+        constraint_types = game.constraint_types
+        assert isinstance(constraint_types, list)
+        assert len(constraint_types) > 0
+        assert all(isinstance(ct, str) for ct in constraint_types)
+
+    async def test_business_analogies(self):
+        """Test business analogies metadata."""
+        game = ShikakuGame("easy")
+        analogies = game.business_analogies
+        assert isinstance(analogies, list)
+        assert len(analogies) > 0
+        assert all(isinstance(a, str) for a in analogies)
+
+    async def test_complexity_profile(self):
+        """Test complexity profile metadata."""
+        game = ShikakuGame("easy")
+        profile = game.complexity_profile
+        assert isinstance(profile, dict)
+        assert "reasoning_type" in profile
+        assert "search_space" in profile
+        assert "constraint_density" in profile

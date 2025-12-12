@@ -52,6 +52,21 @@ class NurikabeGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Create islands and sea - test connectivity reasoning"
 
+    @property
+    def constraint_types(self) -> list[str]:
+        """Constraint types demonstrated by this puzzle."""
+        return ["connectivity", "partition", "all_different_regions", "no_pools"]
+
+    @property
+    def business_analogies(self) -> list[str]:
+        """Business problems this puzzle models."""
+        return ["network_segmentation", "zone_planning", "cluster_analysis"]
+
+    @property
+    def complexity_profile(self) -> dict[str, str]:
+        """Complexity profile of this puzzle."""
+        return {"reasoning_type": "deductive", "search_space": "large", "constraint_density": "dense"}
+
     async def generate_puzzle(self) -> None:
         """Generate a new Nurikabe puzzle with sophisticated algorithm."""
         max_attempts = 100

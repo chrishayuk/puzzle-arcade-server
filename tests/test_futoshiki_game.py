@@ -333,3 +333,28 @@ class TestFutoshikiGame:
             game.grid[r1][c1] = game.size
             game.grid[r2][c2] = 0
             assert not game.is_valid_move(r2, c2, game.size)
+
+    async def test_constraint_types(self):
+        """Test constraint types metadata."""
+        game = FutoshikiGame("easy")
+        constraint_types = game.constraint_types
+        assert isinstance(constraint_types, list)
+        assert len(constraint_types) > 0
+        assert all(isinstance(ct, str) for ct in constraint_types)
+
+    async def test_business_analogies(self):
+        """Test business analogies metadata."""
+        game = FutoshikiGame("easy")
+        analogies = game.business_analogies
+        assert isinstance(analogies, list)
+        assert len(analogies) > 0
+        assert all(isinstance(a, str) for a in analogies)
+
+    async def test_complexity_profile(self):
+        """Test complexity profile metadata."""
+        game = FutoshikiGame("easy")
+        profile = game.complexity_profile
+        assert isinstance(profile, dict)
+        assert "reasoning_type" in profile
+        assert "search_space" in profile
+        assert "constraint_density" in profile

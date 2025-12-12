@@ -52,6 +52,21 @@ class MinesweeperGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Find all mines using logical deduction and probability"
 
+    @property
+    def constraint_types(self) -> list[str]:
+        """Constraint types demonstrated by this puzzle."""
+        return ["linear_count", "probabilistic", "partial_information", "risk_assessment", "local_counting"]
+
+    @property
+    def business_analogies(self) -> list[str]:
+        """Business problems this puzzle models."""
+        return ["risk_assessment", "incomplete_information_decisions", "probabilistic_inference", "safe_exploration"]
+
+    @property
+    def complexity_profile(self) -> dict[str, str]:
+        """Complexity profile of this puzzle."""
+        return {"reasoning_type": "probabilistic", "search_space": "large", "constraint_density": "sparse"}
+
     async def generate_puzzle(self) -> None:
         """Generate a new Minesweeper puzzle."""
         # Place mines randomly

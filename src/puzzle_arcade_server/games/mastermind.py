@@ -57,6 +57,21 @@ class MastermindGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Code-breaking with logical deduction and feedback"
 
+    @property
+    def constraint_types(self) -> list[str]:
+        """Constraint types demonstrated by this puzzle."""
+        return ["feedback", "elimination", "logical_inference", "pattern_matching", "iterative_refinement"]
+
+    @property
+    def business_analogies(self) -> list[str]:
+        """Business problems this puzzle models."""
+        return ["hypothesis_testing", "feedback_loops", "iterative_optimization", "parameter_tuning"]
+
+    @property
+    def complexity_profile(self) -> dict[str, str]:
+        """Complexity profile of this puzzle."""
+        return {"reasoning_type": "hybrid", "search_space": "exponential", "constraint_density": "sparse"}
+
     async def generate_puzzle(self) -> None:
         """Generate a new Mastermind puzzle."""
         # Generate random secret code

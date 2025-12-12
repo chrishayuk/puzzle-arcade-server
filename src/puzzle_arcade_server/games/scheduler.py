@@ -50,6 +50,21 @@ class SchedulerGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Schedule tasks with dependencies to minimize completion time"
 
+    @property
+    def constraint_types(self) -> list[str]:
+        """Constraint types demonstrated by this puzzle."""
+        return ["optimization", "precedence", "resource_allocation", "makespan_minimization"]
+
+    @property
+    def business_analogies(self) -> list[str]:
+        """Business problems this puzzle models."""
+        return ["project_scheduling", "sprint_planning", "team_allocation", "workflow_optimization"]
+
+    @property
+    def complexity_profile(self) -> dict[str, str]:
+        """Complexity profile of this puzzle."""
+        return {"reasoning_type": "optimization", "search_space": "exponential", "constraint_density": "moderate"}
+
     async def generate_puzzle(self) -> None:
         """Generate a new Scheduler puzzle."""
         # Generate tasks with random durations using constants

@@ -45,6 +45,21 @@ class LightsOutGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Toggle lights to turn all off - XOR constraint puzzle"
 
+    @property
+    def constraint_types(self) -> list[str]:
+        """Constraint types demonstrated by this puzzle."""
+        return ["boolean_sat", "xor_constraints", "parity", "linear_algebra"]
+
+    @property
+    def business_analogies(self) -> list[str]:
+        """Business problems this puzzle models."""
+        return ["toggle_systems", "parity_checking", "state_synchronization"]
+
+    @property
+    def complexity_profile(self) -> dict[str, str]:
+        """Complexity profile of this puzzle."""
+        return {"reasoning_type": "deductive", "search_space": "exponential", "constraint_density": "dense"}
+
     def _toggle_cell(self, row: int, col: int, grid: list[list[int]]) -> None:
         """Toggle a cell and its neighbors.
 

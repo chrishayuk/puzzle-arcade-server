@@ -46,6 +46,21 @@ class HitoriGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Shade cells to eliminate duplicates - no adjacent shaded cells"
 
+    @property
+    def constraint_types(self) -> list[str]:
+        """Constraint types demonstrated by this puzzle."""
+        return ["all_different", "connectivity", "adjacency", "partition", "elimination"]
+
+    @property
+    def business_analogies(self) -> list[str]:
+        """Business problems this puzzle models."""
+        return ["conflict_resolution", "network_connectivity", "resource_elimination", "deduplication"]
+
+    @property
+    def complexity_profile(self) -> dict[str, str]:
+        """Complexity profile of this puzzle."""
+        return {"reasoning_type": "deductive", "search_space": "medium", "constraint_density": "moderate"}
+
     def _is_connected(self, grid: list[list[bool]]) -> bool:
         """Check if all unshaded cells are connected.
 

@@ -62,6 +62,21 @@ class EinsteinGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Classic logic deduction - who owns the fish?"
 
+    @property
+    def constraint_types(self) -> list[str]:
+        """Constraint types demonstrated by this puzzle."""
+        return ["multi_attribute", "relational", "positional", "logical_implication", "transitive_closure"]
+
+    @property
+    def business_analogies(self) -> list[str]:
+        """Business problems this puzzle models."""
+        return ["multi_factor_matching", "relationship_mapping", "eligibility_rules", "complex_deduction"]
+
+    @property
+    def complexity_profile(self) -> dict[str, str]:
+        """Complexity profile of this puzzle."""
+        return {"reasoning_type": "deductive", "search_space": "large", "constraint_density": "dense"}
+
     async def generate_puzzle(self) -> None:
         """Generate a new Einstein's Puzzle."""
         # Generate a random valid solution by shuffling attribute lists

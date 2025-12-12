@@ -7,7 +7,15 @@
 [![Pydantic v2](https://img.shields.io/badge/pydantic-v2-purple.svg)](https://docs.pydantic.dev/)
 [![Type Checked](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](http://mypy-lang.org/)
 
-A multi-game puzzle server hosting 19 different logic puzzle types, built using the [chuk-protocol-server](https://github.com/chrishayuk/chuk-protocol-server) framework. Perfect for demonstrating LLM reasoning capabilities and constraint solver generality!
+A **multi-game puzzle server** and **LLM reasoning benchmark arcade** hosting 24 different logic puzzle types, built using the [chuk-protocol-server](https://github.com/chrishayuk/chuk-protocol-server) framework.
+
+**Perfect for:**
+- 🤖 **LLM Agent Testing** - Benchmark reasoning capabilities across constraint types
+- 🎯 **CP-SAT Education** - Learn constraint programming through progressive puzzles
+- 💼 **Business Demos** - Map puzzle patterns to real scheduling, optimization, and allocation problems
+- 🔧 **MCP Tool Integration** - Showcase CHUK + constraint solver workflows
+
+Each puzzle demonstrates specific **constraint patterns** (AllDifferent, Optimization, Connectivity, Boolean SAT, etc.) and maps to **business use cases** (scheduling, resource allocation, routing, etc.).
 
 ## Try It Now
 
@@ -25,9 +33,10 @@ Once connected, type `help` to see available games, or `sudoku easy` to start pl
 
 ## Features
 
-- **19 Puzzle Games** with three difficulty levels each (easy, medium, hard)
+- **24 Puzzle Games** with three difficulty levels each (easy, medium, hard)
   - **7 Classic Logic Puzzles** - Sudoku, KenKen, Kakuro, Binary, Futoshiki, Nonogram, Logic Grid
   - **7 Advanced CP-SAT Puzzles** - Killer Sudoku, Lights Out, Mastermind, Slitherlink, Bridges, Hitori, Shikaku
+  - **5 Specialized Constraint Puzzles** - Hidato, Tents and Trees, Fillomino, Star Battle, Sokoban
   - **2 Optimization Challenges** - Knapsack, Task Scheduler
   - **3 Advanced Reasoning Puzzles** - Nurikabe, Einstein's Puzzle, Minesweeper
 - **Agent-Friendly Mode** - Structured output with clear markers for AI agents and tools
@@ -43,7 +52,7 @@ Once connected, type `help` to see available games, or `sudoku easy` to start pl
 - **Hint system** for when you're stuck
 - **Solution checker** and auto-solver for all games
 - **Clean ASCII art grids** - perfectly aligned for easy parsing
-- **Comprehensive test suite** (530 tests, 95% coverage)
+- **Comprehensive test suite** (716 tests, 94% coverage)
 - **Modern Python best practices:**
   - **Pydantic v2 native** - All models use ConfigDict for type safety
   - **Async native** - Full async/await support throughout
@@ -78,6 +87,16 @@ Once connected, type `help` to see available games, or `sudoku easy` to start pl
 | **Hitori** | 5×5 to 9×9 | AllDifferent + Adjacency + Connectivity | ✅ Complete |
 | **Shikaku** | 6×6 to 10×10 | Area partitioning + Rectangle covering | ✅ Complete |
 
+### Specialized Constraint Puzzles
+
+| Game | Grid Size | Constraint Types | Status |
+|------|-----------|------------------|--------|
+| **Hidato** | 5×5 to 9×9 | Sequential adjacency + Hamiltonian path | ✅ Complete |
+| **Tents and Trees** | 6×6 to 10×10 | Bipartite matching + Adjacency avoidance | ✅ Complete |
+| **Fillomino** | 6×6 to 10×10 | Region growth + Self-referential constraints | ✅ Complete |
+| **Star Battle** | 6×6 to 10×10 | Multi-region placement + Adjacency avoidance | ✅ Complete |
+| **Sokoban** | 6×6 to 10×10 | Spatial planning + Irreversible actions (optimization) | ✅ Complete |
+
 ### Optimization Challenges
 
 | Game | Problem Size | Constraint Types | Status |
@@ -92,6 +111,54 @@ Once connected, type `help` to see available games, or `sudoku easy` to start pl
 | **Nurikabe** | 6×6 to 10×10 | Connectivity + Island sizes + No 2×2 blocks | ✅ Complete |
 | **Einstein's Puzzle** | 5 houses × 5 attributes | Multi-attribute deduction + Logic chains | ✅ Complete |
 | **Minesweeper** | 6×6 to 10×10 | Probabilistic reasoning + Safe deduction | ✅ Complete |
+
+## Solver Profiles & Business Mapping
+
+Each game includes metadata for **constraint types**, **business analogies**, and **complexity profiles**, making it easy to:
+
+- **Select puzzles by constraint pattern** - Need to demonstrate Boolean SAT? → Lights Out
+- **Map to business use cases** - Task Scheduler → Sprint Planning, Knapsack → Portfolio Selection
+- **Benchmark LLM reasoning** - Compare model performance across different constraint densities
+
+### Example: Query Games by Profile
+
+```python
+from puzzle_arcade_server.games import AVAILABLE_GAMES
+
+# Find all optimization problems
+optimization_games = [
+    name for name, game_class in AVAILABLE_GAMES.items()
+    if "optimization" in game_class().constraint_types
+]
+# → ['knapsack', 'scheduler']
+
+# Find games that model resource allocation
+resource_games = [
+    name for name, game_class in AVAILABLE_GAMES.items()
+    if "resource_allocation" in game_class().business_analogies
+]
+# → ['scheduler', 'knapsack']
+```
+
+### Quick Reference: Constraint Types to Business Problems
+
+| Constraint Pattern | Puzzle Examples | Business Use Cases |
+|-------------------|-----------------|-------------------|
+| **Optimization** | Knapsack, Scheduler | Portfolio selection, Sprint planning, Budget allocation |
+| **Precedence** | Scheduler | Project dependencies, Workflow sequencing |
+| **Sequential Adjacency** | Hidato | Path planning, Route sequencing, Tour optimization |
+| **Hamiltonian Path** | Hidato | Traveling salesman, Circuit design |
+| **Bipartite Matching** | Tents and Trees | Job assignment, Resource pairing |
+| **Region Growth** | Fillomino | Territory expansion, Cluster formation |
+| **Spatial Planning** | Sokoban | Warehouse logistics, Movement planning |
+| **Connectivity** | Nurikabe, Slitherlink | Network design, Routing, Zone planning |
+| **Global Loop** | Slitherlink | Circuit design, Path finding |
+| **Boolean SAT** | Lights Out | Feature dependencies, Toggle systems |
+| **Cage Sums** | Killer Sudoku, Kakuro | Team budgets, Grouped constraints |
+| **AllDifferent** | Sudoku, KenKen | Resource uniqueness, Assignment problems |
+
+**See [CURRICULUM.md](CURRICULUM.md) for a structured learning path through constraint patterns**
+**See [DEMOS.md](DEMOS.md) for complete CHUK + MCP solver integration examples**
 
 ## Quick Start
 

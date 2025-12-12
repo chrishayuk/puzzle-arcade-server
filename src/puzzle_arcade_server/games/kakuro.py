@@ -46,6 +46,21 @@ class KakuroGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Crossword math puzzle - fill runs with unique digits that sum to clues"
 
+    @property
+    def constraint_types(self) -> list[str]:
+        """Constraint types demonstrated by this puzzle."""
+        return ["linear_sum", "all_different_in_run", "clue_satisfaction", "regional_constraints"]
+
+    @property
+    def business_analogies(self) -> list[str]:
+        """Business problems this puzzle models."""
+        return ["budget_allocation", "sum_constraints", "unique_distribution", "financial_planning"]
+
+    @property
+    def complexity_profile(self) -> dict[str, str]:
+        """Complexity profile of this puzzle."""
+        return {"reasoning_type": "deductive", "search_space": "medium", "constraint_density": "moderate"}
+
     def _create_pattern(self) -> None:
         """Create a pattern of black and white cells."""
         # Simple pattern: create some black cells

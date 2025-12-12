@@ -32,6 +32,21 @@ class SudokuGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Classic logic puzzle - fill 9x9 grid with digits 1-9"
 
+    @property
+    def constraint_types(self) -> list[str]:
+        """Constraint types demonstrated by this puzzle."""
+        return ["all_different", "regional_uniqueness", "grid_constraints", "multi_level_constraints"]
+
+    @property
+    def business_analogies(self) -> list[str]:
+        """Business problems this puzzle models."""
+        return ["resource_assignment", "unique_allocation", "multi_constraint_satisfaction", "grid_scheduling"]
+
+    @property
+    def complexity_profile(self) -> dict[str, str]:
+        """Complexity profile of this puzzle."""
+        return {"reasoning_type": "deductive", "search_space": "large", "constraint_density": "moderate"}
+
     def is_valid_move(self, row: int, col: int, num: int, grid: list[list[int]] | None = None) -> bool:
         """Check if placing num at (row, col) is valid according to sudoku rules.
 

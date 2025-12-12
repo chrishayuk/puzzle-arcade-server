@@ -274,3 +274,93 @@ class KillerSudokuConfig(GameConfig):
         }
         params = config_map[difficulty]
         return cls(difficulty=difficulty, **params)
+
+
+class HidatoConfig(GameConfig):
+    """Configuration for Hidato game."""
+
+    size: int = Field(ge=5, le=9, description="Grid size (NxN)")
+    num_clues: int = Field(ge=2, description="Number of clue numbers to reveal")
+
+    @classmethod
+    def from_difficulty(cls, difficulty: DifficultyLevel) -> "HidatoConfig":
+        """Create config from difficulty level."""
+        config_map = {
+            DifficultyLevel.EASY: {"size": 5, "num_clues": 8},
+            DifficultyLevel.MEDIUM: {"size": 7, "num_clues": 12},
+            DifficultyLevel.HARD: {"size": 9, "num_clues": 15},
+        }
+        params = config_map[difficulty]
+        return cls(difficulty=difficulty, **params)
+
+
+class TentsConfig(GameConfig):
+    """Configuration for Tents and Trees game."""
+
+    size: int = Field(ge=6, le=10, description="Grid size (NxN)")
+    num_trees: int = Field(ge=4, description="Number of tree-tent pairs")
+
+    @classmethod
+    def from_difficulty(cls, difficulty: DifficultyLevel) -> "TentsConfig":
+        """Create config from difficulty level."""
+        config_map = {
+            DifficultyLevel.EASY: {"size": 6, "num_trees": 6},
+            DifficultyLevel.MEDIUM: {"size": 8, "num_trees": 10},
+            DifficultyLevel.HARD: {"size": 10, "num_trees": 15},
+        }
+        params = config_map[difficulty]
+        return cls(difficulty=difficulty, **params)
+
+
+class FillominoConfig(GameConfig):
+    """Configuration for Fillomino game."""
+
+    size: int = Field(ge=6, le=10, description="Grid size (NxN)")
+    num_clues: int = Field(ge=4, description="Number of clue numbers to reveal")
+
+    @classmethod
+    def from_difficulty(cls, difficulty: DifficultyLevel) -> "FillominoConfig":
+        """Create config from difficulty level."""
+        config_map = {
+            DifficultyLevel.EASY: {"size": 6, "num_clues": 8},
+            DifficultyLevel.MEDIUM: {"size": 8, "num_clues": 10},
+            DifficultyLevel.HARD: {"size": 10, "num_clues": 12},
+        }
+        params = config_map[difficulty]
+        return cls(difficulty=difficulty, **params)
+
+
+class StarBattleConfig(GameConfig):
+    """Configuration for Star Battle game."""
+
+    size: int = Field(ge=6, le=10, description="Grid size (NxN)")
+    stars_per_row: int = Field(ge=1, le=2, description="Number of stars per row/column/region")
+
+    @classmethod
+    def from_difficulty(cls, difficulty: DifficultyLevel) -> "StarBattleConfig":
+        """Create config from difficulty level."""
+        config_map = {
+            DifficultyLevel.EASY: {"size": 6, "stars_per_row": 1},
+            DifficultyLevel.MEDIUM: {"size": 8, "stars_per_row": 2},
+            DifficultyLevel.HARD: {"size": 10, "stars_per_row": 2},
+        }
+        params = config_map[difficulty]
+        return cls(difficulty=difficulty, **params)
+
+
+class SokobanConfig(GameConfig):
+    """Configuration for Sokoban game."""
+
+    size: int = Field(ge=6, le=10, description="Grid size (NxN)")
+    num_boxes: int = Field(ge=2, le=6, description="Number of boxes to push")
+
+    @classmethod
+    def from_difficulty(cls, difficulty: DifficultyLevel) -> "SokobanConfig":
+        """Create config from difficulty level."""
+        config_map = {
+            DifficultyLevel.EASY: {"size": 6, "num_boxes": 2},
+            DifficultyLevel.MEDIUM: {"size": 8, "num_boxes": 3},
+            DifficultyLevel.HARD: {"size": 10, "num_boxes": 4},
+        }
+        params = config_map[difficulty]
+        return cls(difficulty=difficulty, **params)

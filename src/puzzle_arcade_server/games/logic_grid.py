@@ -61,6 +61,26 @@ class LogicGridGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Deductive reasoning puzzle - match attributes using logic"
 
+    @property
+    def constraint_types(self) -> list[str]:
+        """Constraint types demonstrated by this puzzle."""
+        return [
+            "all_different_per_attribute",
+            "cross_attribute_links",
+            "transitive_closure",
+            "bi-directional_inference",
+        ]
+
+    @property
+    def business_analogies(self) -> list[str]:
+        """Business problems this puzzle models."""
+        return ["multi_factor_matching", "relationship_mapping", "entity_resolution", "attribute_correlation"]
+
+    @property
+    def complexity_profile(self) -> dict[str, str]:
+        """Complexity profile of this puzzle."""
+        return {"reasoning_type": "deductive", "search_space": "medium", "constraint_density": "moderate"}
+
     def _generate_solution(self) -> None:
         """Generate a random valid solution."""
         people = self.categories.person

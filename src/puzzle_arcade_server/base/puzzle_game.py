@@ -121,3 +121,32 @@ class PuzzleGame(ABC):
     def description(self) -> str:
         """A one-line description of this puzzle type."""
         pass
+
+    @property
+    def constraint_types(self) -> list[str]:
+        """The types of constraints this puzzle demonstrates.
+
+        Examples: all_different, linear_sum, boolean_sat, optimization,
+                  connectivity, global_loop, feedback, probabilistic
+        """
+        return []
+
+    @property
+    def business_analogies(self) -> list[str]:
+        """Real-world business problems this puzzle models.
+
+        Examples: scheduling, resource_allocation, portfolio_selection,
+                  routing, capacity_planning, constraint_satisfaction
+        """
+        return []
+
+    @property
+    def complexity_profile(self) -> dict[str, str]:
+        """Complexity characteristics of this puzzle.
+
+        Returns dict with:
+        - reasoning_type: deductive, probabilistic, optimization, hybrid
+        - search_space: small, medium, large, exponential
+        - constraint_density: sparse, moderate, dense
+        """
+        return {"reasoning_type": "deductive", "search_space": "medium", "constraint_density": "moderate"}

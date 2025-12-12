@@ -45,6 +45,21 @@ class BinaryPuzzleGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Fill grid with 0s and 1s - no three in a row, equal counts"
 
+    @property
+    def constraint_types(self) -> list[str]:
+        """Constraint types demonstrated by this puzzle."""
+        return ["all_different", "no_three_consecutive", "equal_counts", "pattern_avoidance"]
+
+    @property
+    def business_analogies(self) -> list[str]:
+        """Business problems this puzzle models."""
+        return ["binary_allocation", "balanced_distribution", "pattern_constraints", "quota_management"]
+
+    @property
+    def complexity_profile(self) -> dict[str, str]:
+        """Complexity profile of this puzzle."""
+        return {"reasoning_type": "deductive", "search_space": "medium", "constraint_density": "moderate"}
+
     def _check_no_three_consecutive(self, grid: list[list[int]]) -> bool:
         """Check if there are no three consecutive 0s or 1s.
 

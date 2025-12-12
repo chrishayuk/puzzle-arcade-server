@@ -47,6 +47,21 @@ class NonogramGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Picture logic puzzle - reveal image from number clues"
 
+    @property
+    def constraint_types(self) -> list[str]:
+        """Constraint types demonstrated by this puzzle."""
+        return ["run_length_encoding", "linear_constraints", "cross_referencing", "pattern_completion"]
+
+    @property
+    def business_analogies(self) -> list[str]:
+        """Business problems this puzzle models."""
+        return ["data_reconstruction", "pattern_recognition", "image_recovery", "constraint_propagation"]
+
+    @property
+    def complexity_profile(self) -> dict[str, str]:
+        """Complexity profile of this puzzle."""
+        return {"reasoning_type": "deductive", "search_space": "large", "constraint_density": "dense"}
+
     def _calculate_clues(self, line: list[int]) -> list[int]:
         """Calculate clues for a line (row or column).
 

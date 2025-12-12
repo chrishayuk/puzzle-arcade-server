@@ -52,6 +52,21 @@ class SlitherlinkGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Draw a single loop - numbers show edge counts"
 
+    @property
+    def constraint_types(self) -> list[str]:
+        """Constraint types demonstrated by this puzzle."""
+        return ["global_loop", "local_counting", "topological", "uniqueness"]
+
+    @property
+    def business_analogies(self) -> list[str]:
+        """Business problems this puzzle models."""
+        return ["circuit_design", "routing", "loop_detection"]
+
+    @property
+    def complexity_profile(self) -> dict[str, str]:
+        """Complexity profile of this puzzle."""
+        return {"reasoning_type": "deductive", "search_space": "exponential", "constraint_density": "moderate"}
+
     def _generate_simple_loop(self) -> None:
         """Generate a simple rectangular loop as the solution."""
         # Create a simple rectangular loop for testing

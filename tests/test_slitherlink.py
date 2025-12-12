@@ -360,3 +360,28 @@ class TestSlitherlinkGame:
         # Vertical edges: size rows x (size+1) columns
         assert len(game.v_edges) == game.size
         assert all(len(row) == game.size + 1 for row in game.v_edges)
+
+    async def test_constraint_types(self):
+        """Test constraint types metadata."""
+        game = SlitherlinkGame("easy")
+        constraint_types = game.constraint_types
+        assert isinstance(constraint_types, list)
+        assert len(constraint_types) > 0
+        assert all(isinstance(ct, str) for ct in constraint_types)
+
+    async def test_business_analogies(self):
+        """Test business analogies metadata."""
+        game = SlitherlinkGame("easy")
+        analogies = game.business_analogies
+        assert isinstance(analogies, list)
+        assert len(analogies) > 0
+        assert all(isinstance(a, str) for a in analogies)
+
+    async def test_complexity_profile(self):
+        """Test complexity profile metadata."""
+        game = SlitherlinkGame("easy")
+        profile = game.complexity_profile
+        assert isinstance(profile, dict)
+        assert "reasoning_type" in profile
+        assert "search_space" in profile
+        assert "constraint_density" in profile

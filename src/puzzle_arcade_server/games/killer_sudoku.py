@@ -41,6 +41,21 @@ class KillerSudokuGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Sudoku + Kakuro - regions must sum to targets"
 
+    @property
+    def constraint_types(self) -> list[str]:
+        """Constraint types demonstrated by this puzzle."""
+        return ["all_different", "cage_sums", "linear_constraints", "uniqueness"]
+
+    @property
+    def business_analogies(self) -> list[str]:
+        """Business problems this puzzle models."""
+        return ["grouped_constraints", "sum_budgeting", "allocation_with_quotas"]
+
+    @property
+    def complexity_profile(self) -> dict[str, str]:
+        """Complexity profile of this puzzle."""
+        return {"reasoning_type": "deductive", "search_space": "large", "constraint_density": "dense"}
+
     def is_valid_move(self, row: int, col: int, num: int, grid: list[list[int]] | None = None) -> bool:
         """Check if placing num at (row, col) is valid.
 

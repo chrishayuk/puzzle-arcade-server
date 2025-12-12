@@ -51,6 +51,21 @@ class ShikakuGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Divide grid into rectangles matching the given areas"
 
+    @property
+    def constraint_types(self) -> list[str]:
+        """Constraint types demonstrated by this puzzle."""
+        return ["partition", "area_constraints", "rectangle_tiling", "non_overlapping", "coverage"]
+
+    @property
+    def business_analogies(self) -> list[str]:
+        """Business problems this puzzle models."""
+        return ["space_allocation", "territory_division", "resource_partitioning", "layout_optimization"]
+
+    @property
+    def complexity_profile(self) -> dict[str, str]:
+        """Complexity profile of this puzzle."""
+        return {"reasoning_type": "deductive", "search_space": "large", "constraint_density": "moderate"}
+
     async def generate_puzzle(self) -> None:
         """Generate a new Shikaku puzzle with retry logic."""
         max_attempts = 50

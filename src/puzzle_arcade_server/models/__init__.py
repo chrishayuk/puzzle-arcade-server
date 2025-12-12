@@ -3,8 +3,10 @@
 from .base import GridPosition, MoveResult
 from .config import (
     BinaryConfig,
+    FillominoConfig,
     FutoshikiConfig,
     GameConfig,
+    HidatoConfig,
     KakuroConfig,
     KenKenConfig,
     KillerSudokuConfig,
@@ -17,7 +19,10 @@ from .config import (
     NurikabeConfig,
     SchedulerConfig,
     SlitherlinkConfig,
+    SokobanConfig,
+    StarBattleConfig,
     SudokuConfig,
+    TentsConfig,
 )
 from .enums import (
     ArithmeticOperation,
@@ -64,6 +69,11 @@ __all__ = [
     "KenKenConfig",
     "KillerSudokuConfig",
     "NurikabeConfig",
+    "HidatoConfig",
+    "TentsConfig",
+    "FillominoConfig",
+    "StarBattleConfig",
+    "SokobanConfig",
     # Game-specific models
     "Task",
     "Item",

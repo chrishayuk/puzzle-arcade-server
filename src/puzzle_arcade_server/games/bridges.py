@@ -51,6 +51,21 @@ class BridgesGame(PuzzleGame):
         """A one-line description of this puzzle type."""
         return "Connect islands with bridges - satisfy all island numbers"
 
+    @property
+    def constraint_types(self) -> list[str]:
+        """Constraint types demonstrated by this puzzle."""
+        return ["connectivity", "local_counting", "graph_construction", "path_finding"]
+
+    @property
+    def business_analogies(self) -> list[str]:
+        """Business problems this puzzle models."""
+        return ["network_design", "infrastructure_planning", "connection_optimization", "graph_connectivity"]
+
+    @property
+    def complexity_profile(self) -> dict[str, str]:
+        """Complexity profile of this puzzle."""
+        return {"reasoning_type": "deductive", "search_space": "large", "constraint_density": "moderate"}
+
     def _normalize_bridge(self, r1: int, c1: int, r2: int, c2: int) -> tuple[int, int, int, int]:
         """Normalize bridge coordinates so smaller coords come first."""
         if (r1, c1) > (r2, c2):
