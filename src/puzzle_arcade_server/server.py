@@ -291,6 +291,17 @@ class ArcadeHandler(TelnetHandler):
                 await self.send_line(self.current_game.get_stats())
             return
 
+        if cmd_enum == GameCommand.RESET:
+            # Reset the game to its initial state
+            if hasattr(self.current_game, "initial_grid"):
+                self.current_game.grid = [row[:] for row in self.current_game.initial_grid]  # type: ignore[attr-defined]
+                self.current_game.moves_made = 0
+                await self.send_line("Puzzle reset to initial state.")
+                await self.display_puzzle()
+            else:
+                await self.send_line("Reset not available for this game.")
+            return
+
         # Game-specific commands (Sudoku example)
         if cmd_enum == GameCommand.PLACE:
             if len(parts) != 4:
@@ -405,6 +416,321 @@ class ArcadeHandler(TelnetHandler):
             await self.send_line(result.message)
             if result.success:
                 await self.display_puzzle()
+            return
+
+        # Minesweeper commands
+        if cmd_enum == GameCommand.REVEAL:
+            if len(parts) != 3:
+                await self.send_line("Usage: reveal <row> <col>")
+                await self.send_line("Example: reveal 3 4")
+                return
+
+            try:
+                row = int(parts[1])
+                col = int(parts[2])
+
+                result = await self.current_game.validate_move("reveal", row, col)
+                await self.send_line(result.message)
+
+                if result.success:
+                    await self.display_puzzle()
+
+                    if result.game_over:
+                        await self.send_line("\n" + "=" * 50)
+                        if self.current_game.is_complete():
+                            await self.send_line("CONGRATULATIONS! YOU WIN!")
+                        else:
+                            await self.send_line("GAME OVER! You hit a mine!")
+                        await self.send_line("=" * 50)
+                        await self.send_line("\nType 'menu' to play another game.")
+                        await self.send_line("=" * 50 + "\n")
+
+            except ValueError:
+                await self.send_line("Invalid input. Use numbers only.")
+            return
+
+        if cmd_enum == GameCommand.FLAG:
+            if len(parts) != 3:
+                await self.send_line("Usage: flag <row> <col>")
+                await self.send_line("Example: flag 3 4")
+                return
+
+            try:
+                row = int(parts[1])
+                col = int(parts[2])
+
+                result = await self.current_game.validate_move("flag", row, col)
+                await self.send_line(result.message)
+
+                if result.success:
+                    await self.display_puzzle()
+
+            except ValueError:
+                await self.send_line("Invalid input. Use numbers only.")
+            return
+
+        # Slitherlink command
+        if cmd_enum == GameCommand.SET:
+            if len(parts) != 5:
+                await self.send_line("Usage: set <h|v> <row> <col> <state>")
+                await self.send_line("Example: set h 1 2 1  (set horizontal edge at row 1, col 2 to line)")
+                await self.send_line("States: 0=empty, 1=line, 2=X")
+                return
+
+            try:
+                edge_type = parts[1].lower()
+                row = int(parts[2])
+                col = int(parts[3])
+                state = int(parts[4])
+
+                result = await self.current_game.validate_move(edge_type, row, col, state)
+                await self.send_line(result.message)
+
+                if result.success:
+                    await self.display_puzzle()
+
+                    if self.current_game.is_complete():
+                        await self.send_line("\n" + "=" * 50)
+                        await self.send_line("CONGRATULATIONS! LOOP COMPLETE!")
+                        await self.send_line("=" * 50)
+                        await self.send_line(self.current_game.get_stats())
+                        await self.send_line("\nType 'menu' to play another game.")
+                        await self.send_line("=" * 50 + "\n")
+
+            except ValueError:
+                await self.send_line("Invalid input. Use numbers only for row, col, state.")
+            return
+
+        # Mastermind command
+        if cmd_enum == GameCommand.GUESS:
+            if len(parts) < 2:
+                await self.send_line("Usage: guess <color1> <color2> ... <colorN>")
+                await self.send_line("Example: guess 1 2 3 4")
+                return
+
+            try:
+                guess = [int(p) for p in parts[1:]]
+
+                result = await self.current_game.validate_move(*guess)
+                await self.send_line(result.message)
+
+                if result.success:
+                    await self.display_puzzle()
+
+                    if self.current_game.is_complete():
+                        await self.send_line("\n" + "=" * 50)
+                        await self.send_line("CONGRATULATIONS! CODE CRACKED!")
+                        await self.send_line("=" * 50)
+                        await self.send_line(self.current_game.get_stats())
+                        await self.send_line("\nType 'menu' to play another game.")
+                        await self.send_line("=" * 50 + "\n")
+
+                if result.game_over and not self.current_game.is_complete():
+                    await self.send_line("\n" + "=" * 50)
+                    await self.send_line("GAME OVER! Out of guesses!")
+                    await self.send_line("=" * 50)
+                    await self.send_line("\nType 'menu' to play another game.")
+                    await self.send_line("=" * 50 + "\n")
+
+            except ValueError:
+                await self.send_line("Invalid input. Use numbers only.")
+            return
+
+        # Knapsack commands
+        if cmd_enum == GameCommand.SELECT:
+            if len(parts) != 2:
+                await self.send_line("Usage: select <item_number>")
+                await self.send_line("Example: select 3")
+                return
+
+            try:
+                item_index = int(parts[1])
+
+                result = await self.current_game.validate_move("select", item_index)
+                await self.send_line(result.message)
+
+                if result.success:
+                    await self.display_puzzle()
+
+            except ValueError:
+                await self.send_line("Invalid input. Use numbers only.")
+            return
+
+        if cmd_enum == GameCommand.DESELECT:
+            if len(parts) != 2:
+                await self.send_line("Usage: deselect <item_number>")
+                await self.send_line("Example: deselect 3")
+                return
+
+            try:
+                item_index = int(parts[1])
+
+                result = await self.current_game.validate_move("deselect", item_index)
+                await self.send_line(result.message)
+
+                if result.success:
+                    await self.display_puzzle()
+
+            except ValueError:
+                await self.send_line("Invalid input. Use numbers only.")
+            return
+
+        # Nurikabe command
+        if cmd_enum == GameCommand.MARK:
+            if len(parts) != 4:
+                await self.send_line("Usage: mark <row> <col> <white|black|clear>")
+                await self.send_line("Example: mark 2 3 black")
+                return
+
+            try:
+                row = int(parts[1])
+                col = int(parts[2])
+                color = parts[3].lower()
+
+                result = await self.current_game.validate_move(row, col, color)
+                await self.send_line(result.message)
+
+                if result.success:
+                    await self.display_puzzle()
+
+                    if self.current_game.is_complete():
+                        await self.send_line("\n" + "=" * 50)
+                        await self.send_line("CONGRATULATIONS! PUZZLE SOLVED!")
+                        await self.send_line("=" * 50)
+                        await self.send_line(self.current_game.get_stats())
+                        await self.send_line("\nType 'menu' to play another game.")
+                        await self.send_line("=" * 50 + "\n")
+
+            except ValueError:
+                await self.send_line("Invalid input. Row and col must be numbers.")
+            return
+
+        # Hitori command
+        if cmd_enum == GameCommand.SHADE:
+            if len(parts) != 3:
+                await self.send_line("Usage: shade <row> <col>")
+                await self.send_line("Example: shade 2 3")
+                return
+
+            try:
+                row = int(parts[1])
+                col = int(parts[2])
+
+                result = await self.current_game.validate_move(row, col, "shade")
+                await self.send_line(result.message)
+
+                if result.success:
+                    await self.display_puzzle()
+
+                    if self.current_game.is_complete():
+                        await self.send_line("\n" + "=" * 50)
+                        await self.send_line("CONGRATULATIONS! PUZZLE SOLVED!")
+                        await self.send_line("=" * 50)
+                        await self.send_line(self.current_game.get_stats())
+                        await self.send_line("\nType 'menu' to play another game.")
+                        await self.send_line("=" * 50 + "\n")
+
+            except ValueError:
+                await self.send_line("Invalid input. Use numbers only.")
+            return
+
+        # Bridges command
+        if cmd_enum == GameCommand.BRIDGE:
+            if len(parts) != 6:
+                await self.send_line("Usage: bridge <r1> <c1> <r2> <c2> <count>")
+                await self.send_line("Example: bridge 1 1 1 5 2  (double bridge from (1,1) to (1,5))")
+                await self.send_line("Use count=0 to remove a bridge")
+                return
+
+            try:
+                r1 = int(parts[1])
+                c1 = int(parts[2])
+                r2 = int(parts[3])
+                c2 = int(parts[4])
+                count = int(parts[5])
+
+                result = await self.current_game.validate_move(r1, c1, r2, c2, count)
+                await self.send_line(result.message)
+
+                if result.success:
+                    await self.display_puzzle()
+
+                    if self.current_game.is_complete():
+                        await self.send_line("\n" + "=" * 50)
+                        await self.send_line("CONGRATULATIONS! ALL ISLANDS CONNECTED!")
+                        await self.send_line("=" * 50)
+                        await self.send_line(self.current_game.get_stats())
+                        await self.send_line("\nType 'menu' to play another game.")
+                        await self.send_line("=" * 50 + "\n")
+
+            except ValueError:
+                await self.send_line("Invalid input. Use numbers only.")
+            return
+
+        # Sokoban command
+        if cmd_enum == GameCommand.MOVE:
+            if len(parts) != 2:
+                await self.send_line("Usage: move <direction>")
+                await self.send_line("Directions: up, down, left, right (or u, d, l, r)")
+                return
+
+            direction = parts[1].lower()
+
+            result = await self.current_game.validate_move(direction)
+            await self.send_line(result.message)
+
+            if result.success:
+                await self.display_puzzle()
+
+                if self.current_game.is_complete():
+                    await self.send_line("\n" + "=" * 50)
+                    await self.send_line("CONGRATULATIONS! ALL BOXES ON TARGETS!")
+                    await self.send_line("=" * 50)
+                    await self.send_line(self.current_game.get_stats())
+                    await self.send_line("\nType 'menu' to play another game.")
+                    await self.send_line("=" * 50 + "\n")
+
+            return
+
+        # Scheduler commands
+        if cmd_enum == GameCommand.ASSIGN:
+            if len(parts) != 4:
+                await self.send_line("Usage: assign <task_id> <worker_id> <start_time>")
+                await self.send_line("Example: assign 1 2 0")
+                return
+
+            try:
+                task_id = int(parts[1])
+                worker_id = int(parts[2])
+                start_time = int(parts[3])
+
+                result = await self.current_game.validate_move(task_id, worker_id, start_time)
+                await self.send_line(result.message)
+
+                if result.success:
+                    await self.display_puzzle()
+
+            except ValueError:
+                await self.send_line("Invalid input. Use numbers only.")
+            return
+
+        if cmd_enum == GameCommand.UNASSIGN:
+            if len(parts) != 2:
+                await self.send_line("Usage: unassign <task_id>")
+                await self.send_line("Example: unassign 1")
+                return
+
+            try:
+                task_id = int(parts[1])
+
+                result = await self.current_game.validate_move(task_id, 0, -1)
+                await self.send_line(result.message)
+
+                if result.success:
+                    await self.display_puzzle()
+
+            except ValueError:
+                await self.send_line("Invalid input. Use numbers only.")
             return
 
         await self.send_line("Unknown command. Type 'help' for available commands.")

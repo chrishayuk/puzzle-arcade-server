@@ -24,6 +24,7 @@ class GameCommand(str, Enum):
     HINT = "hint"
     CHECK = "check"
     SOLVE = "solve"
+    RESET = "reset"
     MENU = "menu"
     M = "m"
     MODE = "mode"
@@ -40,6 +41,11 @@ class GameCommand(str, Enum):
     ASSIGN = "assign"
     UNASSIGN = "unassign"
     MARK = "mark"
+    GUESS = "guess"
+    SET = "set"
+    SHADE = "shade"
+    BRIDGE = "bridge"
+    MOVE = "move"
 
 
 class MinesweeperAction(str, Enum):
