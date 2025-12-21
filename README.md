@@ -58,7 +58,8 @@ Once connected, type `help` to see available games, or `sudoku easy` to start pl
 - **Solution checker** and auto-solver for all games
 - **Clean ASCII art grids** - perfectly aligned for easy parsing
 - **Deterministic seeding** - Replay any puzzle with the same seed
-- **Comprehensive test suite** (832 tests, 95% coverage)
+- **Gymnasium-compatible RL Environment** (`PuzzleEnv`) for training agents
+- **Comprehensive test suite** (1067 tests, 94% coverage)
 - **Modern Python best practices:**
   - **Pydantic v2 native** - All models use ConfigDict for type safety
   - **Async native** - Full async/await support throughout
@@ -359,6 +360,82 @@ MOVES: 3
 - `mode agent` - Machine-parseable structured output
 - `mode compact` - Reserved for future use
 
+## Gymnasium-Compatible RL Environment
+
+The project includes a **Gymnasium-compatible environment** for training reinforcement learning agents:
+
+### Quick Start
+
+```python
+from puzzle_arcade_server.gym_env import PuzzleEnv
+
+# Create environment for any of the 24 games
+env = PuzzleEnv("sudoku", difficulty="easy", seed=42)
+
+# Reset to start a new episode
+obs, info = await env.reset()
+
+# Take actions (text commands or tuples)
+obs, reward, terminated, truncated, info = await env.step("place 1 1 5")
+
+# Or use tuple format
+obs, reward, terminated, truncated, info = await env.step(("place", 1, 1, 5))
+
+# Get available games
+games = PuzzleEnv.available_games()
+# → ['sudoku', 'kenken', 'minesweeper', ...]
+```
+
+### Features
+
+- **All 24 games** accessible through unified API
+- **Configurable rewards** for correct moves, invalid attempts, completion bonuses
+- **Hint system** with optional budget limits
+- **Solver-free mode** for pure reasoning benchmarks
+- **Efficiency scoring** based on optimal step counts
+- **Deterministic seeding** for reproducible experiments
+
+### Observation Space
+
+```python
+obs = {
+    "game": "sudoku",
+    "difficulty": "easy",
+    "seed": 42,
+    "moves": 5,
+    "invalid_moves": 1,
+    "hints_used": 2,
+    "is_complete": False,
+    "grid": [[4, 0, 8, ...], ...]  # Game-specific state
+}
+```
+
+### Reward Configuration
+
+```python
+env = PuzzleEnv("kenken", reward_config={
+    "correct_placement": 1.0,      # Reward for valid moves
+    "invalid_attempt": -0.5,       # Penalty for invalid moves
+    "completion_bonus": 10.0,      # Bonus for solving
+    "hint_penalty": -0.1,          # Penalty for using hints
+    "efficiency_multiplier": 2.0,  # Scales completion bonus by efficiency
+})
+```
+
+### Solver Configuration
+
+```python
+from puzzle_arcade_server.models import SolverConfig
+
+# Solver-free mode (no hints allowed)
+config = SolverConfig.solver_free()
+env = PuzzleEnv("sudoku", solver_config=config)
+
+# Limited hints
+config = SolverConfig(hint_budget=5, hint_penalty=0.1)
+env = PuzzleEnv("sudoku", solver_config=config)
+```
+
 ## Evaluation Harness
 
 The project includes a built-in **evaluation harness** for benchmarking puzzle-solving agents:
@@ -617,7 +694,7 @@ pip install -e ".[dev]"
 
 ### Testing
 
-The project has comprehensive test coverage (95%, 832 tests):
+The project has comprehensive test coverage (94%, 1067 tests):
 
 ```bash
 # Run all tests
@@ -636,17 +713,19 @@ make serve-coverage
 ### Coverage by Module
 
 ```
-src/puzzle_arcade_server/games/_base/             95%   # Base classes
+src/puzzle_arcade_server/games/_base/             86%   # Base classes (abstract defaults)
 src/puzzle_arcade_server/games/sudoku/            92%   # Sudoku module
-src/puzzle_arcade_server/games/kenken/            91%   # KenKen module
-src/puzzle_arcade_server/games/minesweeper/       92%   # Minesweeper module
+src/puzzle_arcade_server/games/kenken/            90%   # KenKen module
+src/puzzle_arcade_server/games/minesweeper/       96%   # Minesweeper module
+src/puzzle_arcade_server/games/sokoban/           83%   # Sokoban (complex pathfinding)
 src/puzzle_arcade_server/games/.../               90%+  # All other games
-src/puzzle_arcade_server/models/                 100%   # Pydantic models
+src/puzzle_arcade_server/gym_env.py               90%   # Gymnasium environment
+src/puzzle_arcade_server/models/                  90%+  # Pydantic models
 ------------------------------------------------------
-TOTAL                                              95%  🎯
+TOTAL                                              94%  🎯
 ```
 
-**All modules meet the 90%+ coverage threshold!** ✅
+**Most modules meet the 90%+ coverage threshold.** The remaining gaps are in abstract base class defaults and complex pathfinding algorithms.
 
 ### Code Quality
 
@@ -663,11 +742,11 @@ The project follows modern Python best practices with a **9.8/10 compliance scor
 - ✅ **Async Native** (9.5/10) - All I/O operations use async/await properly
 - ✅ **Type-Safe** (10/10) - No `dict["key"]` patterns, only typed Pydantic models
 - ✅ **No Magic Strings** (10/10) - All constants use enums or typed constants
-- ✅ **Test Coverage** (10/10) - 95% overall, all files ≥90%
+- ✅ **Test Coverage** (9.5/10) - 94% overall, most files ≥90%
 
 #### Quality Metrics
-- **832 tests** - All passing ✅
-- **95% coverage** - Exceeds 90% threshold ✅
+- **1067 tests** - All passing ✅
+- **94% coverage** - Exceeds 90% threshold ✅
 - **Zero linting errors** - Clean codebase ✅
 - **Full type safety** - MyPy passes ✅
 - **Deterministic seeding** - Reproducible puzzles ✅
@@ -835,7 +914,7 @@ puzzle-arcade-server/
 
 ### Key Statistics
 
-- **Test Coverage**: 95% overall (832 tests, all passing)
+- **Test Coverage**: 94% overall (1067 tests, all passing)
 - **Code Quality Score**: 9.8/10 (near perfect compliance)
 - **Games Implemented**: 24 complete puzzle types
   - 7 Classic Logic Puzzles
@@ -845,8 +924,8 @@ puzzle-arcade-server/
   - 3 Advanced Reasoning Puzzles
 - **Supported Transports**: 4 (Telnet, TCP, WebSocket, WS-Telnet)
 - **Agent-Friendly Mode**: Structured output for AI tools
+- **Gymnasium API**: RL-compatible environment for all games
 - **Deterministic Seeding**: Reproducible puzzles for testing
-- **All Modules**: ≥90% test coverage ✅
 
 ## Use Cases
 
@@ -887,7 +966,7 @@ Learn about constraint satisfaction problems:
   - Probabilistic reasoning (Minesweeper)
   - And more!
 - **Well-documented code** showing puzzle generation algorithms
-- **Comprehensive tests** (832 tests, 95% coverage) demonstrating validation
+- **Comprehensive tests** (1067 tests, 94% coverage) demonstrating validation
 - **Deterministic seeding** - Reproduce any puzzle for debugging/testing
 - **Production-ready** - 9.8/10 code quality score
 - **Type-safe** - Full Pydantic v2 and MyPy compliance
