@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from puzzle_arcade_server.games.futoshiki import FutoshikiGame
+from chuk_puzzles_gym.games.futoshiki import FutoshikiGame
 
 
 class TestFutoshikiGame:

@@ -6,7 +6,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from puzzle_arcade_server.games.hitori import HitoriGame
+from chuk_puzzles_gym.games.hitori import HitoriGame
 
 
 class TestHitoriGame:

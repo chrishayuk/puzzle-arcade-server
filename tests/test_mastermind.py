@@ -2,7 +2,7 @@
 
 import pytest
 
-from puzzle_arcade_server.games.mastermind import MastermindGame
+from chuk_puzzles_gym.games.mastermind import MastermindGame
 
 
 class TestMastermindGame:

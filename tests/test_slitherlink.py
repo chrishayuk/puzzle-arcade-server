@@ -2,7 +2,7 @@
 
 import pytest
 
-from puzzle_arcade_server.games.slitherlink import SlitherlinkGame
+from chuk_puzzles_gym.games.slitherlink import SlitherlinkGame
 
 
 class TestSlitherlinkGame:

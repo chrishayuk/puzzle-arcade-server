@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from puzzle_arcade_server.games.kakuro import KakuroGame
+from chuk_puzzles_gym.games.kakuro import KakuroGame
 
 
 class TestKakuroGame:

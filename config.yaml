@@ -6,7 +6,7 @@ servers:
     host: "0.0.0.0"
     port: 8023
     transport: "telnet"
-    handler_class: "puzzle_arcade_server.server:ArcadeHandler"
+    handler_class: "chuk_puzzles_gym.server:ArcadeHandler"
     max_connections: 100
     connection_timeout: 1800  # 30 minutes for game sessions
     welcome_message: "Welcome to the Puzzle Arcade! Challenge your puzzle-solving skills!"
@@ -15,7 +15,7 @@ servers:
     host: "0.0.0.0"
     port: 8024
     transport: "tcp"
-    handler_class: "puzzle_arcade_server.server:ArcadeHandler"
+    handler_class: "chuk_puzzles_gym.server:ArcadeHandler"
     max_connections: 100
     connection_timeout: 1800
     welcome_message: "Welcome to the Puzzle Arcade (TCP)! Challenge your puzzle-solving skills!"
@@ -25,7 +25,7 @@ servers:
     port: 8025
     transport: "websocket"
     ws_path: "/ws"
-    handler_class: "puzzle_arcade_server.server:ArcadeHandler"
+    handler_class: "chuk_puzzles_gym.server:ArcadeHandler"
     use_ssl: false
     allow_origins:
       - "*"
@@ -43,7 +43,7 @@ servers:
     port: 8026
     transport: "ws_telnet"
     ws_path: "/ws"
-    handler_class: "puzzle_arcade_server.server:ArcadeHandler"
+    handler_class: "chuk_puzzles_gym.server:ArcadeHandler"
     use_ssl: false
     ssl_cert: ""
     ssl_key: ""

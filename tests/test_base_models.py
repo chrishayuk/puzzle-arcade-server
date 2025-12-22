@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from pydantic import ValidationError
 
-from puzzle_arcade_server.models.base import GridPosition, MoveResult
+from chuk_puzzles_gym.models.base import GridPosition, MoveResult
 
 
 class TestGridPosition:
@@ -85,7 +85,7 @@ class TestPuzzleGameBase:
 
     async def test_record_move_success(self):
         """Test recording successful moves."""
-        from puzzle_arcade_server.games import AVAILABLE_GAMES
+        from chuk_puzzles_gym.games import AVAILABLE_GAMES
 
         # Use sudoku as a concrete implementation
         game = AVAILABLE_GAMES["sudoku"](difficulty="easy", seed=42)
@@ -98,7 +98,7 @@ class TestPuzzleGameBase:
 
     async def test_record_move_failure(self):
         """Test recording failed moves."""
-        from puzzle_arcade_server.games import AVAILABLE_GAMES
+        from chuk_puzzles_gym.games import AVAILABLE_GAMES
 
         game = AVAILABLE_GAMES["sudoku"](difficulty="easy", seed=42)
         await game.generate_puzzle()
@@ -110,7 +110,7 @@ class TestPuzzleGameBase:
 
     async def test_record_move_retry_detection(self):
         """Test retry detection when moving to same position twice."""
-        from puzzle_arcade_server.games import AVAILABLE_GAMES
+        from chuk_puzzles_gym.games import AVAILABLE_GAMES
 
         game = AVAILABLE_GAMES["sudoku"](difficulty="easy", seed=42)
         await game.generate_puzzle()
@@ -123,7 +123,7 @@ class TestPuzzleGameBase:
 
     async def test_canonical_solution_default(self):
         """Test that canonical_solution returns None by default."""
-        from puzzle_arcade_server.games import AVAILABLE_GAMES
+        from chuk_puzzles_gym.games import AVAILABLE_GAMES
 
         game = AVAILABLE_GAMES["sudoku"](difficulty="easy", seed=42)
         await game.generate_puzzle()
@@ -133,7 +133,7 @@ class TestPuzzleGameBase:
 
     async def test_get_solution_efficiency(self):
         """Test solution efficiency calculation."""
-        from puzzle_arcade_server.games import AVAILABLE_GAMES
+        from chuk_puzzles_gym.games import AVAILABLE_GAMES
 
         game = AVAILABLE_GAMES["sudoku"](difficulty="easy", seed=42)
         await game.generate_puzzle()
@@ -150,7 +150,7 @@ class TestPuzzleGameBase:
 
     async def test_get_solution_efficiency_no_optimal(self):
         """Test efficiency when optimal_steps is None."""
-        from puzzle_arcade_server.games import AVAILABLE_GAMES
+        from chuk_puzzles_gym.games import AVAILABLE_GAMES
 
         # Create a game and set optimal_steps to None
         game = AVAILABLE_GAMES["mastermind"](difficulty="easy", seed=42)

@@ -2,7 +2,7 @@
 
 import pytest
 
-from puzzle_arcade_server.games.minesweeper import MinesweeperGame
+from chuk_puzzles_gym.games.minesweeper import MinesweeperGame
 
 
 class TestMinesweeperGame:

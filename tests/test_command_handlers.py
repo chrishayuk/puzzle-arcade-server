@@ -8,10 +8,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import pytest
 
-from puzzle_arcade_server.games._base import CommandResult
-from puzzle_arcade_server.games.sudoku import SudokuGame
-from puzzle_arcade_server.games.sudoku.commands import SudokuCommandHandler
-from puzzle_arcade_server.models import GameCommand, MoveResult
+from chuk_puzzles_gym.games._base import CommandResult
+from chuk_puzzles_gym.games.sudoku import SudokuGame
+from chuk_puzzles_gym.games.sudoku.commands import SudokuCommandHandler
+from chuk_puzzles_gym.models import GameCommand, MoveResult
 
 
 class TestCommandResult:

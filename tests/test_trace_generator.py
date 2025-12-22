@@ -2,9 +2,9 @@
 
 import pytest
 
-from puzzle_arcade_server.games import AVAILABLE_GAMES
-from puzzle_arcade_server.models import SolverConfig
-from puzzle_arcade_server.trace import TraceGenerator, generate_trace
+from chuk_puzzles_gym.games import AVAILABLE_GAMES
+from chuk_puzzles_gym.models import SolverConfig
+from chuk_puzzles_gym.trace import TraceGenerator, generate_trace
 
 
 class TestTraceGenerator:
@@ -360,8 +360,8 @@ class TestTraceGeneratorEdgeCases:
 
     async def test_empty_trace_fallback(self, generator):
         """Test empty trace when no generator or solution available (lines 57-61)."""
-        from puzzle_arcade_server.games._base import PuzzleGame
-        from puzzle_arcade_server.models import DifficultyLevel
+        from chuk_puzzles_gym.games._base import PuzzleGame
+        from chuk_puzzles_gym.models import DifficultyLevel
 
         # Create a minimal mock game with no generator and no grid/solution
         class MockGame(PuzzleGame):
@@ -421,8 +421,8 @@ class TestTraceGeneratorEdgeCases:
 
     async def test_grid_puzzle_no_solution(self, generator):
         """Test grid puzzle generator with no solution (line 76)."""
-        from puzzle_arcade_server.games._base import PuzzleGame
-        from puzzle_arcade_server.models import DifficultyLevel
+        from chuk_puzzles_gym.games._base import PuzzleGame
+        from chuk_puzzles_gym.models import DifficultyLevel
 
         class MockGridGame(PuzzleGame):
             def __init__(self):
@@ -482,8 +482,8 @@ class TestTraceGeneratorEdgeCases:
 
     async def test_generate_from_canonical_tuple(self, generator):
         """Test generating trace from canonical solution with tuples (lines 113-131)."""
-        from puzzle_arcade_server.games._base import PuzzleGame
-        from puzzle_arcade_server.models import DifficultyLevel
+        from chuk_puzzles_gym.games._base import PuzzleGame
+        from chuk_puzzles_gym.models import DifficultyLevel
 
         class MockCanonicalGame(PuzzleGame):
             def __init__(self):
@@ -543,8 +543,8 @@ class TestTraceGeneratorEdgeCases:
 
     async def test_generate_from_canonical_non_tuple(self, generator):
         """Test generating trace from canonical solution with non-tuple moves (lines 133-139)."""
-        from puzzle_arcade_server.games._base import PuzzleGame
-        from puzzle_arcade_server.models import DifficultyLevel
+        from chuk_puzzles_gym.games._base import PuzzleGame
+        from chuk_puzzles_gym.models import DifficultyLevel
 
         class MockCanonicalNonTupleGame(PuzzleGame):
             def __init__(self):
@@ -604,8 +604,8 @@ class TestTraceGeneratorEdgeCases:
 
     async def test_generate_from_canonical_empty(self, generator):
         """Test generating trace from empty canonical solution (line 118)."""
-        from puzzle_arcade_server.games._base import PuzzleGame
-        from puzzle_arcade_server.models import DifficultyLevel
+        from chuk_puzzles_gym.games._base import PuzzleGame
+        from chuk_puzzles_gym.models import DifficultyLevel
 
         class MockEmptyCanonicalGame(PuzzleGame):
             def __init__(self):

@@ -4,7 +4,7 @@ This module provides a standard RL environment interface for puzzle games,
 compatible with Gymnasium (the maintained fork of OpenAI Gym).
 
 Usage:
-    from puzzle_arcade_server.gym_env import PuzzleEnv
+    from chuk_puzzles_gym.gym_env import PuzzleEnv
 
     env = PuzzleEnv("sudoku", difficulty="medium", seed=42)
     obs, info = env.reset()

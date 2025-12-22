@@ -1,13 +1,14 @@
-# Puzzle Arcade Server
+# chuk-puzzles-gym
 
-[![Test](https://github.com/chrishayuk/puzzle-arcade-server/workflows/Test/badge.svg)](https://github.com/chrishayuk/puzzle-arcade-server/actions)
+[![PyPI](https://img.shields.io/pypi/v/chuk-puzzles-gym.svg)](https://pypi.org/project/chuk-puzzles-gym/)
+[![Test](https://github.com/chrishayuk/chuk-puzzles-gym/workflows/Test/badge.svg)](https://github.com/chrishayuk/chuk-puzzles-gym/actions)
 [![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)](htmlcov/index.html)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Pydantic v2](https://img.shields.io/badge/pydantic-v2-purple.svg)](https://docs.pydantic.dev/)
 [![Type Checked](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](http://mypy-lang.org/)
 
-A **multi-game puzzle server** and **LLM reasoning benchmark arcade** hosting 24 different logic puzzle types, built using the [chuk-protocol-server](https://github.com/chrishayuk/chuk-protocol-server) framework.
+A **multi-game puzzle gym** for **LLM training and benchmarking**, hosting 24 different logic puzzle types with synthetic data generation. Built using [chuk-gym-core](https://github.com/chrishayuk/chuk-gym-core) and [chuk-protocol-server](https://github.com/chrishayuk/chuk-protocol-server).
 
 **Perfect for:**
 - 🤖 **LLM Agent Testing** - Benchmark reasoning capabilities across constraint types
@@ -19,14 +20,31 @@ Each puzzle demonstrates specific **constraint patterns** (AllDifferent, Optimiz
 
 ## Try It Now
 
-A live demo server is running on Fly.io. Try it instantly:
+### Run Locally with uvx
+
+No installation required - run directly with [uvx](https://docs.astral.sh/uv/guides/tools/):
+
+```bash
+# Start the puzzle server
+uvx chuk-puzzles-gym
+
+# Generate training datasets
+uvx --from chuk-puzzles-gym chuk-puzzles-export -g sudoku -n 100 -o data.jsonl
+
+# Benchmark an agent
+uvx --from chuk-puzzles-gym chuk-puzzles-eval -g sudoku -n 10
+```
+
+### Connect to Live Demo
+
+A live demo server is running on Fly.io:
 
 ```bash
 # Connect via Telnet (IPv6)
 telnet 2a09:8280:1::b8:79f4:0 8023
 
 # WebSocket connections
-ws://puzzle-arcade-server.fly.dev:8025/ws
+ws://chuk-puzzles-gym.fly.dev:8025/ws
 ```
 
 Once connected, type `help` to see available games, or `sudoku easy` to start playing!
@@ -43,11 +61,16 @@ Once connected, type `help` to see available games, or `sudoku easy` to start pl
   - Enable with `mode agent` command
   - Machine-parseable grid format with clear start/end markers
   - Compact output optimized for LLM tool integration
-- **Evaluation Harness** (`puzzle-arcade-eval`) - Built-in benchmarking CLI
+- **Evaluation Harness** (`chuk-puzzles-eval`) - Built-in benchmarking CLI
   - Batch evaluation with configurable episodes
   - Multiple output formats (JSON, CSV, Markdown)
   - Metrics: moves, invalid moves, hints, solve time
   - Reproducible with deterministic seeds
+- **Dataset Export** (`chuk-puzzles-export`) - Synthetic data generation for LLM training
+  - JSONL output with complete problem definitions and solutions
+  - Step-by-step reasoning traces for teacher-forcing
+  - Constraint metadata and difficulty profiles
+  - Compatible with chuk-gym-core schema
 - **Multiple transport protocols:**
   - **Telnet** (port 8023) - Classic telnet protocol
   - **TCP** (port 8024) - Raw TCP connections
@@ -130,7 +153,7 @@ Each game includes metadata for **constraint types**, **business analogies**, an
 ### Example: Query Games by Profile
 
 ```python
-from puzzle_arcade_server.games import AVAILABLE_GAMES
+from chuk_puzzles_gym.games import AVAILABLE_GAMES
 
 # Find all optimization problems
 optimization_games = [
@@ -173,14 +196,44 @@ resource_games = [
 
 ### Installation
 
+#### Using uvx (No Installation Required)
+
+Run directly without installing using [uvx](https://docs.astral.sh/uv/guides/tools/):
+
+```bash
+# Run the puzzle server
+uvx chuk-puzzles-gym
+
+# Generate synthetic datasets
+uvx --from chuk-puzzles-gym chuk-puzzles-export -o puzzles.jsonl
+
+# Run evaluation harness
+uvx --from chuk-puzzles-gym chuk-puzzles-eval -g sudoku -n 10
+```
+
+#### From PyPI
+
+```bash
+# Install with pip
+pip install chuk-puzzles-gym
+
+# Or with uv
+uv pip install chuk-puzzles-gym
+
+# Then run commands directly
+chuk-puzzles-server          # Start the server
+chuk-puzzles-export          # Generate datasets
+chuk-puzzles-eval            # Run evaluation
+```
+
 #### From Source (Development)
 
 ##### Using UV (Recommended)
 
 ```bash
 # Clone the repository
-git clone https://github.com/chrishayuk/puzzle-arcade-server.git
-cd puzzle-arcade-server
+git clone https://github.com/chrishayuk/chuk-puzzles-gym.git
+cd chuk-puzzles-gym
 
 # Install UV if you haven't already
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -196,8 +249,8 @@ make run
 
 ```bash
 # Clone the repository
-git clone https://github.com/chrishayuk/puzzle-arcade-server.git
-cd puzzle-arcade-server
+git clone https://github.com/chrishayuk/chuk-puzzles-gym.git
+cd chuk-puzzles-gym
 
 # Install in development mode with dev dependencies
 pip install -e ".[dev]"
@@ -246,8 +299,8 @@ Build and run with Docker:
 make docker-run
 
 # Or manually
-docker build -t puzzle-arcade-server .
-docker run -p 8023:8023 -p 8024:8024 -p 8025:8025 -p 8026:8026 puzzle-arcade-server
+docker build -t chuk-puzzles-gym .
+docker run -p 8023:8023 -p 8024:8024 -p 8025:8025 -p 8026:8026 chuk-puzzles-gym
 ```
 
 ## Connecting to the Server
@@ -367,7 +420,7 @@ The project includes a **Gymnasium-compatible environment** for training reinfor
 ### Quick Start
 
 ```python
-from puzzle_arcade_server.gym_env import PuzzleEnv
+from chuk_puzzles_gym.gym_env import PuzzleEnv
 
 # Create environment for any of the 24 games
 env = PuzzleEnv("sudoku", difficulty="easy", seed=42)
@@ -425,7 +478,7 @@ env = PuzzleEnv("kenken", reward_config={
 ### Solver Configuration
 
 ```python
-from puzzle_arcade_server.models import SolverConfig
+from chuk_puzzles_gym.models import SolverConfig
 
 # Solver-free mode (no hints allowed)
 config = SolverConfig.solver_free()
@@ -444,16 +497,16 @@ The project includes a built-in **evaluation harness** for benchmarking puzzle-s
 
 ```bash
 # List all available games
-puzzle-arcade-eval --list-games
+chuk-puzzles-eval --list-games
 
 # Evaluate a specific game (10 episodes, medium difficulty)
-puzzle-arcade-eval sudoku -d medium -n 10 -v
+chuk-puzzles-eval sudoku -d medium -n 10 -v
 
 # Evaluate all games (5 episodes each)
-puzzle-arcade-eval --all -d easy -n 5
+chuk-puzzles-eval --all -d easy -n 5
 
 # Output as JSON for analysis
-puzzle-arcade-eval sudoku -n 20 -o json > results.json
+chuk-puzzles-eval sudoku -n 20 -o json > results.json
 ```
 
 ### Using Make Targets
@@ -494,6 +547,211 @@ Avg Time:   12ms
 | `hints_used` | Number of hints requested |
 | `wall_time_ms` | Time to solve in milliseconds |
 | `seed` | Puzzle seed for reproducibility |
+
+## Dataset Export
+
+Generate synthetic puzzle datasets for training and benchmarking LLMs and constraint solvers. The export system produces JSONL files with complete problem definitions, solutions, and step-by-step reasoning traces.
+
+### CLI Usage
+
+```bash
+# Generate 100 puzzles per game/difficulty for all 24 games
+chuk-puzzles-export -o puzzles.jsonl
+
+# Specific games only
+chuk-puzzles-export -g sudoku kenken einstein -n 100 -o selected.jsonl
+
+# Single difficulty level
+chuk-puzzles-export -d easy -n 50 -o easy_puzzles.jsonl
+
+# Multiple difficulties
+chuk-puzzles-export -d easy medium -n 100 -o train_data.jsonl
+
+# Reproducible generation with seed
+chuk-puzzles-export -g sudoku -s 0 -n 1000 -o sudoku_seed0.jsonl
+
+# Without step-by-step traces (smaller files)
+chuk-puzzles-export --no-trace -n 500 -o compact.jsonl
+
+# List all available games
+chuk-puzzles-export --list-games
+```
+
+### CLI Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-o, --output` | Output file path | `puzzles.jsonl` |
+| `-g, --games` | Games to include (space-separated) | All games |
+| `-n, --count` | Problems per game/difficulty combo | 100 |
+| `-d, --difficulties` | Difficulty levels to include | easy, medium, hard |
+| `-s, --seed` | Starting seed for reproducibility | 0 |
+| `--no-trace` | Exclude step-by-step solution traces | False |
+| `--list-games` | List available games and exit | - |
+
+### Python API
+
+```python
+import asyncio
+from chuk_puzzles_gym.export import DatasetExporter, generate_dataset
+from chuk_gym_core import DifficultyLevel
+
+# Quick generation with async function
+async def generate():
+    total = await generate_dataset(
+        output_path="data.jsonl",
+        games=["sudoku", "kenken", "einstein"],
+        count_per_game=100,
+        difficulties=["easy", "medium", "hard"],
+        include_trace=True,
+    )
+    print(f"Generated {total} problems")
+
+asyncio.run(generate())
+
+# Fine-grained control with context manager
+async def export_custom():
+    with DatasetExporter("puzzles.jsonl", include_trace=True) as exporter:
+        # Export specific game
+        await exporter.export_game(
+            game_name="sudoku",
+            count=500,
+            difficulty=DifficultyLevel.MEDIUM,
+            start_seed=0,
+        )
+
+        # Export all games
+        await exporter.export_all_games(
+            count_per_game=50,
+            difficulties=[DifficultyLevel.EASY, DifficultyLevel.HARD],
+        )
+
+        print(f"Total exported: {exporter.count}")
+
+asyncio.run(export_custom())
+```
+
+### Output Format
+
+Each line in the JSONL file contains a complete problem definition:
+
+```json
+{
+  "id": "sudoku_medium_42",
+  "seed": 42,
+  "domain": "sudoku",
+  "difficulty": "medium",
+  "prompt": "Sudoku: Classic 9x9 logic puzzle...\n\nRULES:\n...\n\n[grid]",
+  "initial_state": [[0,0,3,...], ...],
+  "gold_answer": "[[4,8,3,...], ...]",
+  "constraint_types": ["all_different_rows", "all_different_columns", "all_different_boxes"],
+  "business_analogies": ["resource_allocation", "scheduling", "assignment_problems"],
+  "difficulty_profile": {
+    "logic_depth": 45,
+    "branching_factor": 3.2,
+    "state_observability": 0.88,
+    "constraint_density": 0.75
+  },
+  "operation_count": 47,
+  "tags": ["sudoku", "medium"]
+}
+```
+
+### Solution Traces
+
+When `include_trace=True` (default), each problem includes step-by-step solution traces for teacher-forcing training:
+
+```json
+{
+  "problem": { ... },
+  "trace": {
+    "problem_id": "sudoku_medium_42",
+    "steps": [
+      {
+        "index": 0,
+        "operation": "PLACE",
+        "before_state": "cell(r1,c1)=empty",
+        "after_state": "cell(r1,c1)=4",
+        "output_value": 4,
+        "position": [1, 1],
+        "rule_applied": "naked_single_row",
+        "explanation": "Place 4 at row 1, column 1. This is the only valid digit considering row 1, column 1, and box 1 constraints."
+      },
+      {
+        "index": 1,
+        "operation": "PLACE",
+        "before_state": "cell(r1,c3)=empty",
+        "after_state": "cell(r1,c3)=7",
+        "output_value": 7,
+        "position": [1, 3],
+        "rule_applied": "naked_single_box",
+        "explanation": "Place 7 at row 1, column 3..."
+      }
+    ],
+    "checkpoints": [0, 12, 24, 47]
+  }
+}
+```
+
+### Trace Operations
+
+| Operation | Description | Used By |
+|-----------|-------------|---------|
+| `PLACE` | Place a value in a cell | Sudoku, KenKen, Nonogram, etc. |
+| `ELIMINATE` | Mark a cell as excluded/shaded | Hitori, Minesweeper |
+| `DEDUCE` | Logical deduction step | Einstein, Logic Grid, Mastermind |
+
+### Rule Types by Game
+
+| Game | Rules Applied |
+|------|--------------|
+| Sudoku | `naked_single_row`, `naked_single_column`, `naked_single_box`, `elimination` |
+| Binary | `balance_constraint` |
+| KenKen/Kakuro | `arithmetic_constraint` |
+| Nonogram | `line_constraint` |
+| Einstein | `logical_deduction` |
+| Hitori | `duplicate_elimination` |
+| Bridges | `connectivity_constraint` |
+| Slitherlink | `loop_constraint` |
+| Others | `constraint_propagation` |
+
+### Example: Generate Training Data
+
+```bash
+# Generate large training dataset
+chuk-puzzles-export \
+    -g sudoku kenken kakuro binary futoshiki \
+    -n 1000 \
+    -d easy medium hard \
+    -s 0 \
+    -o training_data.jsonl
+
+# Generate evaluation set (different seed range)
+chuk-puzzles-export \
+    -g sudoku kenken kakuro binary futoshiki \
+    -n 100 \
+    -d easy medium hard \
+    -s 100000 \
+    -o eval_data.jsonl
+```
+
+### Dataset Statistics
+
+With default settings (`-n 100` per game/difficulty):
+
+| Configuration | Problems Generated |
+|--------------|-------------------|
+| All games, all difficulties | 24 games × 3 difficulties × 100 = 7,200 |
+| Single game, all difficulties | 1 × 3 × 100 = 300 |
+| All games, single difficulty | 24 × 1 × 100 = 2,400 |
+
+### Integration with chuk-gym-core
+
+The export system uses [chuk-gym-core](https://pypi.org/project/chuk-gym-core/) for consistent output format, compatible with:
+
+- **chuk-math-gym** - Mathematical reasoning datasets
+- **Teacher-forcing training** - Step-by-step trace supervision
+- **Evaluation pipelines** - Standardized problem/solution schema
 
 ## Universal Game Commands
 
@@ -634,7 +892,7 @@ games/
 All games extend the `PuzzleGame` abstract base class with **deterministic seeding**:
 
 ```python
-from puzzle_arcade_server.games._base import PuzzleGame
+from chuk_puzzles_gym.games._base import PuzzleGame
 
 class PuzzleGame(ABC):
     def __init__(self, difficulty: str = "easy", seed: int | None = None):
@@ -682,8 +940,8 @@ The `ArcadeHandler` class manages:
 
 ```bash
 # Clone the repository
-git clone https://github.com/chrishayuk/puzzle-arcade-server.git
-cd puzzle-arcade-server
+git clone https://github.com/chrishayuk/chuk-puzzles-gym.git
+cd chuk-puzzles-gym
 
 # Install development dependencies (with UV)
 make dev-install
@@ -713,14 +971,14 @@ make serve-coverage
 ### Coverage by Module
 
 ```
-src/puzzle_arcade_server/games/_base/             86%   # Base classes (abstract defaults)
-src/puzzle_arcade_server/games/sudoku/            92%   # Sudoku module
-src/puzzle_arcade_server/games/kenken/            90%   # KenKen module
-src/puzzle_arcade_server/games/minesweeper/       96%   # Minesweeper module
-src/puzzle_arcade_server/games/sokoban/           83%   # Sokoban (complex pathfinding)
-src/puzzle_arcade_server/games/.../               90%+  # All other games
-src/puzzle_arcade_server/gym_env.py               90%   # Gymnasium environment
-src/puzzle_arcade_server/models/                  90%+  # Pydantic models
+src/chuk_puzzles_gym/games/_base/             86%   # Base classes (abstract defaults)
+src/chuk_puzzles_gym/games/sudoku/            92%   # Sudoku module
+src/chuk_puzzles_gym/games/kenken/            90%   # KenKen module
+src/chuk_puzzles_gym/games/minesweeper/       96%   # Minesweeper module
+src/chuk_puzzles_gym/games/sokoban/           83%   # Sokoban (complex pathfinding)
+src/chuk_puzzles_gym/games/.../               90%+  # All other games
+src/chuk_puzzles_gym/gym_env.py               90%   # Gymnasium environment
+src/chuk_puzzles_gym/models/                  90%+  # Pydantic models
 ------------------------------------------------------
 TOTAL                                              94%  🎯
 ```
@@ -865,9 +1123,9 @@ telnet <your-ipv6> 8023
 ## Project Structure
 
 ```
-puzzle-arcade-server/
+chuk-puzzles-gym/
 ├── src/
-│   └── puzzle_arcade_server/
+│   └── chuk_puzzles_gym/
 │       ├── __init__.py           # Package initialization
 │       ├── server.py             # Main arcade handler
 │       ├── constants.py          # Game constants
@@ -974,7 +1232,7 @@ Learn about constraint satisfaction problems:
 
 ## Adding New Puzzle Games
 
-1. Create a new game folder in `src/puzzle_arcade_server/games/`:
+1. Create a new game folder in `src/chuk_puzzles_gym/games/`:
 
 ```
 games/
@@ -1049,7 +1307,7 @@ from .game import MyPuzzleGame
 __all__ = ["MyPuzzleGame"]
 ```
 
-5. Register in `src/puzzle_arcade_server/games/__init__.py`:
+5. Register in `src/chuk_puzzles_gym/games/__init__.py`:
 
 ```python
 from .my_puzzle import MyPuzzleGame
@@ -1063,7 +1321,7 @@ AVAILABLE_GAMES = {
 6. Add tests in `tests/test_my_puzzle_game.py`:
 
 ```python
-from puzzle_arcade_server.games.my_puzzle import MyPuzzleGame
+from chuk_puzzles_gym.games.my_puzzle import MyPuzzleGame
 
 class TestMyPuzzleGame:
     async def test_deterministic_seeding(self):

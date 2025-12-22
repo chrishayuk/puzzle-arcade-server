@@ -2,8 +2,8 @@
 
 import pytest
 
-from puzzle_arcade_server.games.knapsack import KnapsackGame
-from puzzle_arcade_server.games.knapsack.models import Item
+from chuk_puzzles_gym.games.knapsack import KnapsackGame
+from chuk_puzzles_gym.games.knapsack.models import Item
 
 
 class TestKnapsackGame:

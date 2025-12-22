@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from puzzle_arcade_server.games.tents import TentsGame
+from chuk_puzzles_gym.games.tents import TentsGame
 
 
 class TestTentsGame:

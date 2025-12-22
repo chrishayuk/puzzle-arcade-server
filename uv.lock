@@ -70,6 +70,46 @@ wheels = [
 ]
 
 [[package]]
+name = "chuk-puzzles-gym"
+version = "0.9"
+source = { editable = "." }
+dependencies = [
+    { name = "chuk-gym-core" },
+    { name = "chuk-protocol-server" },
+    { name = "pydantic" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "bandit" },
+    { name = "ipython" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "pytest-watch" },
+    { name = "ruff" },
+    { name = "websockets" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.7.5" },
+    { name = "chuk-gym-core", specifier = ">=0.1.1" },
+    { name = "chuk-protocol-server", specifier = ">=0.1.0" },
+    { name = "ipython", marker = "extra == 'dev'", specifier = ">=8.14.0" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.4.0" },
+    { name = "pydantic", specifier = ">=2.0.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.4.0" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.21.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.1.0" },
+    { name = "pytest-watch", marker = "extra == 'dev'", specifier = ">=4.2.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
+    { name = "websockets", marker = "extra == 'dev'", specifier = ">=11.0.0" },
+]
+provides-extras = ["dev"]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -470,46 +510,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/cd/05/0a34433a064256a57
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8e/37/efad0257dc6e593a18957422533ff0f87ede7c9c6ea010a2177d738fb82f/pure_eval-0.2.3-py3-none-any.whl", hash = "sha256:1db8e35b67b3d218d818ae653e27f06c3aa420901fa7b081ca98cbedc874e0d0", size = 11842, upload-time = "2024-07-21T12:58:20.04Z" },
 ]
-
-[[package]]
-name = "puzzle-arcade-server"
-version = "0.8"
-source = { editable = "." }
-dependencies = [
-    { name = "chuk-gym-core" },
-    { name = "chuk-protocol-server" },
-    { name = "pydantic" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "bandit" },
-    { name = "ipython" },
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "pytest-watch" },
-    { name = "ruff" },
-    { name = "websockets" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.7.5" },
-    { name = "chuk-gym-core", specifier = ">=0.1.1" },
-    { name = "chuk-protocol-server", specifier = ">=0.1.0" },
-    { name = "ipython", marker = "extra == 'dev'", specifier = ">=8.14.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.4.0" },
-    { name = "pydantic", specifier = ">=2.0.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.4.0" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.21.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.1.0" },
-    { name = "pytest-watch", marker = "extra == 'dev'", specifier = ">=4.2.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
-    { name = "websockets", marker = "extra == 'dev'", specifier = ">=11.0.0" },
-]
-provides-extras = ["dev"]
 
 [[package]]
 name = "pydantic"

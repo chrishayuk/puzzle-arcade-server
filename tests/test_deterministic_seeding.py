@@ -14,7 +14,7 @@ import pytest
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from puzzle_arcade_server.games import AVAILABLE_GAMES
+from chuk_puzzles_gym.games import AVAILABLE_GAMES
 
 
 def get_game_state(game):

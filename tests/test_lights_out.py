@@ -2,7 +2,7 @@
 
 import pytest
 
-from puzzle_arcade_server.games.lights_out import LightsOutGame
+from chuk_puzzles_gym.games.lights_out import LightsOutGame
 
 
 class TestLightsOutGame:

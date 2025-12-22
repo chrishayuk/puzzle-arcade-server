@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from puzzle_arcade_server.eval import (
+from chuk_puzzles_gym.eval import (
     EvaluationReport,
     _apply_hint,
     evaluate_all_games,
@@ -17,8 +17,8 @@ from puzzle_arcade_server.eval import (
     parse_args,
     run_episode,
 )
-from puzzle_arcade_server.games import AVAILABLE_GAMES
-from puzzle_arcade_server.models import (
+from chuk_puzzles_gym.games import AVAILABLE_GAMES
+from chuk_puzzles_gym.models import (
     DifficultyLevel,
     EpisodeResult,
     EpisodeStatus,
@@ -873,7 +873,7 @@ class TestEpisodeTracer:
 
     def test_tracer_memory_only(self):
         """Test tracer with memory-only output."""
-        from puzzle_arcade_server.models import EpisodeTracer
+        from chuk_puzzles_gym.models import EpisodeTracer
 
         tracer = EpisodeTracer()
 
@@ -904,7 +904,7 @@ class TestEpisodeTracer:
 
     def test_tracer_file_output(self, tmp_path):
         """Test tracer with file output."""
-        from puzzle_arcade_server.models import EpisodeTracer
+        from chuk_puzzles_gym.models import EpisodeTracer
 
         trace_file = tmp_path / "traces.jsonl"
 
@@ -932,7 +932,7 @@ class TestEpisodeTracer:
 
     def test_tracer_with_solver_config(self):
         """Test tracer records solver config."""
-        from puzzle_arcade_server.models import EpisodeTracer, SolverConfig
+        from chuk_puzzles_gym.models import EpisodeTracer, SolverConfig
 
         tracer = EpisodeTracer()
         config = SolverConfig(solver_allowed=True, hint_budget=5, hint_penalty=0.1)
@@ -947,7 +947,7 @@ class TestEpisodeTracer:
 
     def test_tracer_to_jsonl_format(self):
         """Test JSONL output format."""
-        from puzzle_arcade_server.models import EpisodeTracer
+        from chuk_puzzles_gym.models import EpisodeTracer
 
         tracer = EpisodeTracer()
         tracer.start_episode(game="bridges", seed=99, difficulty="easy")
@@ -965,7 +965,7 @@ class TestEpisodeTracer:
 
     def test_tracer_no_events_before_start(self):
         """Test that events before start are ignored."""
-        from puzzle_arcade_server.models import EpisodeTracer
+        from chuk_puzzles_gym.models import EpisodeTracer
 
         tracer = EpisodeTracer()
 
@@ -978,7 +978,7 @@ class TestEpisodeTracer:
 
     def test_tracer_episode_status_enum(self):
         """Test tracer accepts EpisodeStatus enum."""
-        from puzzle_arcade_server.models import EpisodeStatus, EpisodeTracer
+        from chuk_puzzles_gym.models import EpisodeStatus, EpisodeTracer
 
         tracer = EpisodeTracer()
         tracer.start_episode(game="sudoku", seed=1, difficulty="easy")
@@ -993,7 +993,7 @@ class TestEvaluationSummary:
 
     def test_creation(self):
         """Test creating an EvaluationSummary."""
-        from puzzle_arcade_server.models.evaluation import EvaluationSummary
+        from chuk_puzzles_gym.models.evaluation import EvaluationSummary
 
         summary = EvaluationSummary(
             game="sudoku",
@@ -1006,7 +1006,7 @@ class TestEvaluationSummary:
 
     def test_solve_rate_empty(self):
         """Test solve rate with no episodes."""
-        from puzzle_arcade_server.models.evaluation import EvaluationSummary
+        from chuk_puzzles_gym.models.evaluation import EvaluationSummary
 
         summary = EvaluationSummary(
             game="sudoku",
@@ -1018,7 +1018,7 @@ class TestEvaluationSummary:
 
     def test_solve_rate_with_episodes(self):
         """Test solve rate with episodes."""
-        from puzzle_arcade_server.models.evaluation import EvaluationSummary
+        from chuk_puzzles_gym.models.evaluation import EvaluationSummary
 
         summary = EvaluationSummary(
             game="sudoku",
@@ -1030,7 +1030,7 @@ class TestEvaluationSummary:
 
     def test_avg_steps_empty(self):
         """Test avg steps with no episodes."""
-        from puzzle_arcade_server.models.evaluation import EvaluationSummary
+        from chuk_puzzles_gym.models.evaluation import EvaluationSummary
 
         summary = EvaluationSummary(
             game="sudoku",
@@ -1043,7 +1043,7 @@ class TestEvaluationSummary:
 
     def test_avg_steps_with_episodes(self):
         """Test avg steps with episodes."""
-        from puzzle_arcade_server.models.evaluation import EvaluationSummary
+        from chuk_puzzles_gym.models.evaluation import EvaluationSummary
 
         summary = EvaluationSummary(
             game="sudoku",
@@ -1059,7 +1059,7 @@ class TestEvaluationSummary:
 
     def test_avg_efficiency_empty(self):
         """Test avg efficiency with no episodes."""
-        from puzzle_arcade_server.models.evaluation import EvaluationSummary
+        from chuk_puzzles_gym.models.evaluation import EvaluationSummary
 
         summary = EvaluationSummary(
             game="sudoku",
@@ -1072,7 +1072,7 @@ class TestEvaluationSummary:
 
     def test_avg_efficiency_with_solved(self):
         """Test avg efficiency with solved episodes."""
-        from puzzle_arcade_server.models.evaluation import EvaluationSummary
+        from chuk_puzzles_gym.models.evaluation import EvaluationSummary
 
         summary = EvaluationSummary(
             game="sudoku",
@@ -1088,7 +1088,7 @@ class TestEvaluationSummary:
 
     def test_avg_time_ms_empty(self):
         """Test avg time with no episodes."""
-        from puzzle_arcade_server.models.evaluation import EvaluationSummary
+        from chuk_puzzles_gym.models.evaluation import EvaluationSummary
 
         summary = EvaluationSummary(
             game="sudoku",
@@ -1101,7 +1101,7 @@ class TestEvaluationSummary:
 
     def test_avg_time_ms_with_episodes(self):
         """Test avg time with episodes."""
-        from puzzle_arcade_server.models.evaluation import EvaluationSummary
+        from chuk_puzzles_gym.models.evaluation import EvaluationSummary
 
         summary = EvaluationSummary(
             game="sudoku",

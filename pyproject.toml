@@ -3,16 +3,16 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "puzzle-arcade-server"
-version = "0.8"
-description = "Multi-game puzzle server for telnet - LLMs with MCP solvers welcome!"
+name = "chuk-puzzles-gym"
+version = "0.9"
+description = "Multi-game puzzle gym for LLM training and benchmarking - 24 constraint puzzles with synthetic data generation"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
     {name = "Chris Hay"}
 ]
-keywords = ["puzzle", "telnet", "server", "game", "sudoku", "kenken", "kakuro", "websocket", "mcp"]
+keywords = ["puzzle", "gym", "llm", "training", "benchmark", "sudoku", "kenken", "constraint-satisfaction", "reasoning", "mcp"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -43,14 +43,14 @@ dev = [
 ]
 
 [project.scripts]
-puzzle-arcade-server = "puzzle_arcade_server.server:run_server"
-puzzle-arcade-eval = "puzzle_arcade_server.eval:main"
-puzzle-arcade-export = "puzzle_arcade_server.export.dataset:main"
+chuk-puzzles-server = "chuk_puzzles_gym.server:run_server"
+chuk-puzzles-eval = "chuk_puzzles_gym.eval:main"
+chuk-puzzles-export = "chuk_puzzles_gym.export.dataset:main"
 
 [project.urls]
-Homepage = "https://github.com/chrishayuk/puzzle-arcade-server"
-Repository = "https://github.com/chrishayuk/puzzle-arcade-server"
-Documentation = "https://github.com/chrishayuk/puzzle-arcade-server#readme"
+Homepage = "https://github.com/chrishayuk/chuk-puzzles-gym"
+Repository = "https://github.com/chrishayuk/chuk-puzzles-gym"
+Documentation = "https://github.com/chrishayuk/chuk-puzzles-gym#readme"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

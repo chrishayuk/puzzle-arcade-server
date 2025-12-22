@@ -8,15 +8,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 
 # Import all config classes
-from puzzle_arcade_server.games.binary.config import BinaryConfig
-from puzzle_arcade_server.games.bridges.config import BridgesConfig
-from puzzle_arcade_server.games.einstein.config import EinsteinConfig
-from puzzle_arcade_server.games.fillomino.config import FillominoConfig
-from puzzle_arcade_server.games.hidato.config import HidatoConfig
-from puzzle_arcade_server.games.hitori.config import HitoriConfig
-from puzzle_arcade_server.games.shikaku.config import ShikakuConfig
-from puzzle_arcade_server.games.star_battle.config import StarBattleConfig
-from puzzle_arcade_server.models import DifficultyLevel
+from chuk_puzzles_gym.games.binary.config import BinaryConfig
+from chuk_puzzles_gym.games.bridges.config import BridgesConfig
+from chuk_puzzles_gym.games.einstein.config import EinsteinConfig
+from chuk_puzzles_gym.games.fillomino.config import FillominoConfig
+from chuk_puzzles_gym.games.hidato.config import HidatoConfig
+from chuk_puzzles_gym.games.hitori.config import HitoriConfig
+from chuk_puzzles_gym.games.shikaku.config import ShikakuConfig
+from chuk_puzzles_gym.games.star_battle.config import StarBattleConfig
+from chuk_puzzles_gym.models import DifficultyLevel
 
 
 class TestBinaryConfig:

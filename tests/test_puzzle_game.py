@@ -6,7 +6,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from puzzle_arcade_server.games._base import PuzzleGame
+from chuk_puzzles_gym.games._base import PuzzleGame
 
 
 class ConcretePuzzleGame(PuzzleGame):
@@ -18,7 +18,7 @@ class ConcretePuzzleGame(PuzzleGame):
 
     async def validate_move(self, *args):
         """Validate a test move."""
-        from puzzle_arcade_server.models import MoveResult
+        from chuk_puzzles_gym.models import MoveResult
 
         return MoveResult(success=True, message="Valid move")
 
@@ -58,7 +58,7 @@ class TestPuzzleGame:
 
     async def test_initialization(self):
         """Test game initialization."""
-        from puzzle_arcade_server.models import DifficultyLevel
+        from chuk_puzzles_gym.models import DifficultyLevel
 
         game = ConcretePuzzleGame("medium")
         assert game.difficulty == DifficultyLevel.MEDIUM
@@ -149,7 +149,7 @@ class TestPuzzleGame:
 
     async def test_difficulty_enum(self):
         """Test initialization with DifficultyLevel enum."""
-        from puzzle_arcade_server.models import DifficultyLevel
+        from chuk_puzzles_gym.models import DifficultyLevel
 
         game = ConcretePuzzleGame(DifficultyLevel.HARD)
         assert game.difficulty == DifficultyLevel.HARD

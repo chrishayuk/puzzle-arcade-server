@@ -14,10 +14,10 @@ from typing import Any, TextIO
 
 from chuk_gym_core import DifficultyLevel, DifficultyProfile, JSONLExporter, Problem
 
-from puzzle_arcade_server.games import AVAILABLE_GAMES
-from puzzle_arcade_server.games._base import PuzzleGame
-from puzzle_arcade_server.models import SolverConfig
-from puzzle_arcade_server.trace import TraceGenerator
+from chuk_puzzles_gym.games import AVAILABLE_GAMES
+from chuk_puzzles_gym.games._base import PuzzleGame
+from chuk_puzzles_gym.models import SolverConfig
+from chuk_puzzles_gym.trace import TraceGenerator
 
 
 class DatasetExporter:

@@ -7,7 +7,7 @@ Provides JSONL export for:
 - Episode recording for analysis
 """
 
-from puzzle_arcade_server.export.dataset import (
+from chuk_puzzles_gym.export.dataset import (
     DatasetExporter,
     export_problems,
     generate_dataset,

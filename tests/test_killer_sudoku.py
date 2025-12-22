@@ -1,6 +1,6 @@
 """Tests for Killer Sudoku puzzle game."""
 
-from puzzle_arcade_server.games.killer_sudoku import KillerSudokuGame
+from chuk_puzzles_gym.games.killer_sudoku import KillerSudokuGame
 
 
 class TestKillerSudokuGame:
@@ -81,7 +81,7 @@ class TestKillerSudokuGame:
 
     async def test_check_cage_constraints_duplicate(self):
         """Test cage constraint with duplicate values."""
-        from puzzle_arcade_server.games.killer_sudoku.models import Cage
+        from chuk_puzzles_gym.games.killer_sudoku.models import Cage
 
         game = KillerSudokuGame("easy")
         game.cages = [
@@ -97,7 +97,7 @@ class TestKillerSudokuGame:
 
     async def test_check_cage_constraints_exceed_sum(self):
         """Test cage constraint when sum is exceeded."""
-        from puzzle_arcade_server.games.killer_sudoku.models import Cage
+        from chuk_puzzles_gym.games.killer_sudoku.models import Cage
 
         game = KillerSudokuGame("easy")
         game.cages = [
@@ -113,7 +113,7 @@ class TestKillerSudokuGame:
 
     async def test_check_cage_constraints_correct(self):
         """Test cage constraint with correct values."""
-        from puzzle_arcade_server.games.killer_sudoku.models import Cage
+        from chuk_puzzles_gym.games.killer_sudoku.models import Cage
 
         game = KillerSudokuGame("easy")
         game.cages = [
@@ -182,7 +182,7 @@ class TestKillerSudokuGame:
 
     async def test_is_complete_filled_correct(self):
         """Test completion check with correctly filled grid."""
-        from puzzle_arcade_server.games.killer_sudoku.models import Cage
+        from chuk_puzzles_gym.games.killer_sudoku.models import Cage
 
         game = KillerSudokuGame("easy")
         # Create a simple valid grid

@@ -2,7 +2,7 @@
 
 import pytest
 
-from puzzle_arcade_server.games.nurikabe import NurikabeGame
+from chuk_puzzles_gym.games.nurikabe import NurikabeGame
 
 
 class TestNurikabeGame:

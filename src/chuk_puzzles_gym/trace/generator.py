@@ -8,7 +8,7 @@ from typing import Any
 
 from chuk_gym_core import Step, StepOperation, Trace
 
-from puzzle_arcade_server.games._base import PuzzleGame
+from chuk_puzzles_gym.games._base import PuzzleGame
 
 
 class TraceGenerator:

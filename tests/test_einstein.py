@@ -2,7 +2,7 @@
 
 import pytest
 
-from puzzle_arcade_server.games.einstein import EinsteinGame
+from chuk_puzzles_gym.games.einstein import EinsteinGame
 
 
 class TestEinsteinGame:
@@ -224,7 +224,7 @@ class TestEinsteinGame:
         await game.generate_puzzle()
 
         # Fill all houses but with wrong values
-        from puzzle_arcade_server.games.einstein.models import HouseAssignment
+        from chuk_puzzles_gym.games.einstein.models import HouseAssignment
 
         for i in range(game.num_houses):
             game.assignments[i] = HouseAssignment(
