@@ -45,6 +45,18 @@ wheels = [
 ]
 
 [[package]]
+name = "chuk-gym-core"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/90/af/9086d71af239035e2f80cfdfde8091b58860de0f3a8ba8a3f0e62ca3e1f5/chuk_gym_core-0.1.1.tar.gz", hash = "sha256:549ad347d91392e57ab4bd1c1e80ca24abc24756a5b2f40738a4f59c84b6bf7e", size = 113409, upload-time = "2025-12-22T01:19:26.088Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d7/f7/f8b979576bfe62fda03858b9de2a06555d213dae89c48e34677878e46ff5/chuk_gym_core-0.1.1-py3-none-any.whl", hash = "sha256:21ccf04ad08a5dec8d98228a5fd36d48457ad3efbd9f3fb703b62467a6ca22a5", size = 37784, upload-time = "2025-12-22T01:19:24.651Z" },
+]
+
+[[package]]
 name = "chuk-protocol-server"
 version = "0.2"
 source = { registry = "https://pypi.org/simple" }
@@ -464,6 +476,7 @@ name = "puzzle-arcade-server"
 version = "0.7"
 source = { editable = "." }
 dependencies = [
+    { name = "chuk-gym-core" },
     { name = "chuk-protocol-server" },
     { name = "pydantic" },
 ]
@@ -484,6 +497,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.7.5" },
+    { name = "chuk-gym-core", specifier = ">=0.1.1" },
     { name = "chuk-protocol-server", specifier = ">=0.1.0" },
     { name = "ipython", marker = "extra == 'dev'", specifier = ">=8.14.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.4.0" },

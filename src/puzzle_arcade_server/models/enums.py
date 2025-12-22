@@ -2,13 +2,18 @@
 
 from enum import Enum, IntEnum
 
+# Import DifficultyLevel from chuk-gym-core for unified difficulty levels
+from chuk_gym_core import DifficultyLevel
 
-class DifficultyLevel(str, Enum):
-    """Difficulty levels for all games."""
-
-    EASY = "easy"
-    MEDIUM = "medium"
-    HARD = "hard"
+# Re-export for backwards compatibility
+__all__ = [
+    "DifficultyLevel",
+    "GameCommand",
+    "CellState",
+    "ConnectionState",
+    "OutputMode",
+    "EpisodeStatus",
+]
 
 
 class GameCommand(str, Enum):

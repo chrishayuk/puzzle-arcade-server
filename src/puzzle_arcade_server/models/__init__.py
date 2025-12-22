@@ -3,6 +3,8 @@
 Game-specific models and enums have been moved to their respective game folders.
 """
 
+from chuk_gym_core import DifficultyProfile
+
 from .base import GridPosition, MoveResult
 from .config import GameConfig
 from .enums import (
@@ -14,7 +16,6 @@ from .enums import (
     OutputMode,
 )
 from .evaluation import (
-    DifficultyProfile,
     EpisodeResult,
     EpisodeTracer,
     EvaluationSummary,

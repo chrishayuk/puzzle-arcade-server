@@ -2,6 +2,8 @@
 
 These models support the standardised evaluation schema for benchmarking
 agent performance across puzzles.
+
+Re-exports core types from chuk-gym-core for convenience.
 """
 
 import json
@@ -11,93 +13,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, TextIO
 
+# Import core types from chuk-gym-core
+from chuk_gym_core import (
+    SolverConfig,
+)
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from .enums import DifficultyLevel, EpisodeStatus
-
-
-class SolverConfig(BaseModel):
-    """Configuration for solver/hint usage in a puzzle session.
-
-    This makes solver usage a first-class experimental variable,
-    enabling research comparing "small model + tools" vs "big model without tools".
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    solver_allowed: bool = Field(
-        default=True,
-        description="Whether the agent can request solver hints",
-    )
-    hint_budget: int = Field(
-        default=100,
-        ge=0,
-        description="Maximum number of solver hint invocations allowed",
-    )
-    hint_penalty: float = Field(
-        default=0.0,
-        ge=0.0,
-        le=1.0,
-        description="Score penalty per hint used (0.0-1.0)",
-    )
-    partial_hints: bool = Field(
-        default=True,
-        description="If True, hints reveal one cell; if False, hints reveal strategy",
-    )
-
-    @classmethod
-    def solver_free(cls) -> "SolverConfig":
-        """Create a solver-free configuration (pure model reasoning)."""
-        return cls(solver_allowed=False, hint_budget=0)
-
-    @classmethod
-    def solver_assisted(cls, budget: int = 10, penalty: float = 0.1) -> "SolverConfig":
-        """Create a solver-assisted configuration with budget and penalty."""
-        return cls(solver_allowed=True, hint_budget=budget, hint_penalty=penalty)
-
-
-class DifficultyProfile(BaseModel):
-    """Detailed difficulty characteristics for curriculum learning.
-
-    Goes beyond simple easy/medium/hard to enable:
-    - Curriculum learning with skill ladders
-    - Fair comparisons across identical difficulty profiles
-    - Automated training runs with reproducible difficulty scaling
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    # Core difficulty dimensions
-    logic_depth: int = Field(
-        default=1,
-        ge=1,
-        le=10,
-        description="Steps of deduction required (1=trivial, 10=expert)",
-    )
-    branching_factor: float = Field(
-        default=1.0,
-        ge=1.0,
-        description="Average number of choices per decision point",
-    )
-    state_observability: float = Field(
-        default=1.0,
-        ge=0.0,
-        le=1.0,
-        description="Fraction of state visible (1.0=fully observable)",
-    )
-    constraint_density: float = Field(
-        default=0.5,
-        ge=0.0,
-        le=1.0,
-        description="Ratio of constrained cells/variables",
-    )
-
-    # Derived complexity estimate
-    @computed_field
-    @property
-    def estimated_complexity(self) -> float:
-        """Composite complexity score for difficulty ordering."""
-        return self.logic_depth * self.branching_factor * (2 - self.state_observability)
 
 
 class MoveRecord(BaseModel):

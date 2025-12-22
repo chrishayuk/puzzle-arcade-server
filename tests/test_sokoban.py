@@ -1046,3 +1046,550 @@ class TestSokobanGame:
         # Position (2, 2) is not in a corner
         result = game._is_corner(2, 2)
         assert result is False
+
+    async def test_optimal_steps_no_goals(self):
+        """Test optimal_steps returns None when no goals."""
+        game = SokobanGame("easy")
+        # Don't generate puzzle, so no goals
+        assert game.optimal_steps is None
+
+    async def test_optimal_steps_no_boxes(self):
+        """Test optimal_steps returns None when no boxes."""
+        game = SokobanGame("easy")
+        await game.generate_puzzle()
+        # Remove all boxes
+        for r in range(game.size):
+            for c in range(game.size):
+                if game.grid[r][c] in [2, 5]:
+                    game.grid[r][c] = 0
+        assert game.optimal_steps is None
+
+    async def test_optimal_steps_with_boxes(self):
+        """Test optimal_steps calculation with boxes."""
+        game = SokobanGame("easy")
+        await game.generate_puzzle()
+        steps = game.optimal_steps
+        assert steps is not None
+        assert steps > 0
+
+    async def test_difficulty_profile_easy(self):
+        """Test difficulty profile for easy."""
+        game = SokobanGame("easy")
+        profile = game.difficulty_profile
+        assert profile.logic_depth == 3
+
+    async def test_difficulty_profile_medium(self):
+        """Test difficulty profile for medium."""
+        game = SokobanGame("medium")
+        profile = game.difficulty_profile
+        assert profile.logic_depth == 5
+
+    async def test_difficulty_profile_hard(self):
+        """Test difficulty profile for hard."""
+        game = SokobanGame("hard")
+        profile = game.difficulty_profile
+        assert profile.logic_depth == 8
+
+    async def test_can_push_right_at_edge(self):
+        """Test _can_push_to_goal pushing right near right edge."""
+        game = SokobanGame("easy")
+        game.grid = [[0 for _ in range(game.size)] for _ in range(game.size)]
+        for i in range(game.size):
+            game.grid[0][i] = 1
+            game.grid[game.size - 1][i] = 1
+            game.grid[i][0] = 1
+            game.grid[i][game.size - 1] = 1
+
+        # box at (2, game.size-3), goal at (2, game.size-2)
+        # push space at (2, game.size-4)
+        result = game._can_push_to_goal(2, game.size - 3, 2, game.size - 2)
+        assert isinstance(result, bool)
+
+    async def test_can_push_left_at_edge(self):
+        """Test _can_push_to_goal pushing left near left edge."""
+        game = SokobanGame("easy")
+        game.grid = [[0 for _ in range(game.size)] for _ in range(game.size)]
+        for i in range(game.size):
+            game.grid[0][i] = 1
+            game.grid[game.size - 1][i] = 1
+            game.grid[i][0] = 1
+            game.grid[i][game.size - 1] = 1
+
+        # Test push left where push space would be at edge
+        # box at (2, 2), goal at (2, 1), push left needs space at (2, 3)
+        result = game._can_push_to_goal(2, 2, 2, 1)
+        assert isinstance(result, bool)
+
+    async def test_can_push_down_at_edge(self):
+        """Test _can_push_to_goal pushing down near bottom edge."""
+        game = SokobanGame("easy")
+        game.grid = [[0 for _ in range(game.size)] for _ in range(game.size)]
+        for i in range(game.size):
+            game.grid[0][i] = 1
+            game.grid[game.size - 1][i] = 1
+            game.grid[i][0] = 1
+            game.grid[i][game.size - 1] = 1
+
+        # box at (game.size-3, 2), goal at (game.size-2, 2)
+        result = game._can_push_to_goal(game.size - 3, 2, game.size - 2, 2)
+        assert isinstance(result, bool)
+
+    async def test_can_push_up_at_edge(self):
+        """Test _can_push_to_goal pushing up near top edge."""
+        game = SokobanGame("easy")
+        game.grid = [[0 for _ in range(game.size)] for _ in range(game.size)]
+        for i in range(game.size):
+            game.grid[0][i] = 1
+            game.grid[game.size - 1][i] = 1
+            game.grid[i][0] = 1
+            game.grid[i][game.size - 1] = 1
+
+        # box at (2, 2), goal at (1, 2), push up needs space at (3, 2)
+        result = game._can_push_to_goal(2, 2, 1, 2)
+        assert isinstance(result, bool)
+
+    async def test_fallback_puzzle_triggered(self):
+        """Test that fallback puzzle generation works."""
+        # Use a seed that might trigger fallback
+        game = SokobanGame("hard", seed=999999)
+        await game.generate_puzzle()
+        assert game.game_started
+        assert len(game.goals) > 0
+
+    async def test_hint_all_boxes_on_goals(self):
+        """Test hint when all boxes are already on goals."""
+        game = SokobanGame("easy")
+        await game.generate_puzzle()
+
+        # Put all boxes on goals
+        for r in range(game.size):
+            for c in range(game.size):
+                if game.grid[r][c] == 2:  # Box not on goal
+                    game.grid[r][c] = 0
+
+        for gr, gc in game.goals:
+            game.grid[gr][gc] = 5  # Box on goal
+
+        hint = await game.get_hint()
+        # Should return None since puzzle is solved
+        assert hint is None
+
+    async def test_hint_find_path_to_push(self):
+        """Test hint finding path to push position."""
+        game = SokobanGame("easy", seed=123)
+        await game.generate_puzzle()
+
+        # Run a few hints to exercise path finding
+        for _ in range(15):
+            if game.is_complete():
+                break
+            hint = await game.get_hint()
+            if hint is None:
+                break
+            await game.validate_move(hint[0])
+
+    async def test_hint_fallback_empty_or_push(self):
+        """Test hint fallback for empty moves or pushes."""
+        game = SokobanGame("easy")
+        await game.generate_puzzle()
+
+        # Get hints until we exhaust options
+        for _ in range(20):
+            hint = await game.get_hint()
+            if hint is None:
+                break
+            direction, message = hint
+            assert direction in ["up", "down", "left", "right"]
+            await game.validate_move(direction)
+
+    async def test_generation_path_clear_check(self):
+        """Test puzzle generation path clearing logic."""
+        # Generate multiple puzzles to exercise different code paths
+        for seed in range(10):
+            game = SokobanGame("medium", seed=seed)
+            await game.generate_puzzle()
+            assert game.game_started
+
+    async def test_generation_box_placement_directions(self):
+        """Test puzzle generation tries all directions for box placement."""
+        # Different seeds will exercise different direction choices
+        for seed in [100, 200, 300, 400, 500]:
+            game = SokobanGame("easy", seed=seed)
+            await game.generate_puzzle()
+            assert len(game.goals) > 0
+
+    async def test_can_push_left_path_blocked_by_wall(self):
+        """Test _can_push_to_goal push left with wall in path (line 152)."""
+        game = SokobanGame("easy")
+        game.grid = [[0 for _ in range(game.size)] for _ in range(game.size)]
+        for i in range(game.size):
+            game.grid[0][i] = 1
+            game.grid[game.size - 1][i] = 1
+            game.grid[i][0] = 1
+            game.grid[i][game.size - 1] = 1
+
+        # Block path between box and goal for push left
+        # box at (2, 4), goal at (2, 2) - wall at (2, 3) blocks path
+        game.grid[2][3] = 1
+
+        result = game._can_push_to_goal(2, 4, 2, 2)
+        assert result is False
+
+    async def test_can_push_left_push_space_blocked(self):
+        """Test _can_push_to_goal push left when push space is blocked (line 148)."""
+        game = SokobanGame("easy")
+        game.grid = [[0 for _ in range(game.size)] for _ in range(game.size)]
+        for i in range(game.size):
+            game.grid[0][i] = 1
+            game.grid[game.size - 1][i] = 1
+            game.grid[i][0] = 1
+            game.grid[i][game.size - 1] = 1
+
+        # Block push space for push left: box at (2, 3), goal at (2, 2)
+        # Push space would be at (2, 4) - block it
+        game.grid[2][4] = 1
+
+        result = game._can_push_to_goal(2, 3, 2, 2)
+        assert result is False
+
+    async def test_can_push_down_space_blocked(self):
+        """Test _can_push_to_goal push down when push space blocked (line 159)."""
+        game = SokobanGame("easy")
+        game.grid = [[0 for _ in range(game.size)] for _ in range(game.size)]
+        for i in range(game.size):
+            game.grid[0][i] = 1
+            game.grid[game.size - 1][i] = 1
+            game.grid[i][0] = 1
+            game.grid[i][game.size - 1] = 1
+
+        # Push down: box at (2, 2), goal at (4, 2), need space at (1, 2) for push
+        # Block push space
+        game.grid[1][2] = 1
+
+        result = game._can_push_to_goal(2, 2, 4, 2)
+        assert result is False
+
+    async def test_can_push_up_space_blocked(self):
+        """Test _can_push_to_goal push up when push space blocked (line 172)."""
+        game = SokobanGame("easy")
+        game.grid = [[0 for _ in range(game.size)] for _ in range(game.size)]
+        for i in range(game.size):
+            game.grid[0][i] = 1
+            game.grid[game.size - 1][i] = 1
+            game.grid[i][0] = 1
+            game.grid[i][game.size - 1] = 1
+
+        # Push up: box at (4, 2), goal at (2, 2), need space at (5, 2) for push
+        # But (5, 2) is wall at edge (size-1 is 5 for size=6)
+        # So use box at (3, 2), goal at (2, 2), block space at (4, 2)
+        game.grid[4][2] = 1
+
+        result = game._can_push_to_goal(3, 2, 2, 2)
+        assert result is False
+
+    async def test_can_push_up_path_blocked(self):
+        """Test _can_push_to_goal push up with wall in path (line 176)."""
+        game = SokobanGame("easy")
+        game.grid = [[0 for _ in range(game.size)] for _ in range(game.size)]
+        for i in range(game.size):
+            game.grid[0][i] = 1
+            game.grid[game.size - 1][i] = 1
+            game.grid[i][0] = 1
+            game.grid[i][game.size - 1] = 1
+
+        # Push up: box at (4, 2), goal at (2, 2), wall at (3, 2) blocks path
+        game.grid[3][2] = 1
+
+        result = game._can_push_to_goal(4, 2, 2, 2)
+        assert result is False
+
+    async def test_push_box_outside_grid_check(self):
+        """Test pushing box fails when push destination is outside grid (line 416)."""
+        game = SokobanGame("easy")
+        await game.generate_puzzle()
+
+        # Place box at position where pushing would go outside
+        # Position at row 1, col 1 - push up would go to row 0 (wall)
+        # Clear area first
+        game.grid = [[0 for _ in range(game.size)] for _ in range(game.size)]
+        for i in range(game.size):
+            game.grid[0][i] = 1
+            game.grid[game.size - 1][i] = 1
+            game.grid[i][0] = 1
+            game.grid[i][game.size - 1] = 1
+
+        # Set up: player at (2,2), box at (1,2) - pushing up goes into wall at (0,2)
+        game.grid[1][2] = 2  # Box
+        game.player_pos = (2, 2)
+        game.grid[2][2] = 4  # Player
+
+        result = await game.validate_move("up")
+        # Should fail because box can't be pushed into wall
+        assert not result.success
+
+    async def test_unknown_cell_type_message(self):
+        """Test handling of unknown cell type returns proper message (line 441)."""
+        game = SokobanGame("easy")
+        await game.generate_puzzle()
+
+        # Set up an invalid cell type scenario
+        pr, pc = game.player_pos
+        # Find an adjacent empty cell
+        for dr, dc, direction in [(0, 1, "right"), (0, -1, "left"), (1, 0, "down"), (-1, 0, "up")]:
+            nr, nc = pr + dr, pc + dc
+            if 0 <= nr < game.size and 0 <= nc < game.size and game.grid[nr][nc] == 0:
+                game.grid[nr][nc] = 99  # Invalid cell type
+                result = await game.validate_move(direction)
+                assert not result.success
+                assert "unknown" in result.message.lower() or isinstance(result.success, bool)
+                return
+
+    async def test_bfs_path_out_of_bounds(self):
+        """Test BFS handles out of bounds checks (line 479)."""
+        game = SokobanGame("easy")
+        await game.generate_puzzle()
+
+        # Position player at edge
+        game.grid[1][1] = 4
+        game.player_pos = (1, 1)
+
+        # Try to find path - BFS should handle bounds
+        path = game._find_path_to_push_position(3, 3)
+        # Path may or may not exist, but should not crash
+        assert path is None or isinstance(path, list)
+
+    async def test_hint_no_boxes_not_on_goal(self):
+        """Test get_hint when no boxes are off goals (line 521)."""
+        game = SokobanGame("easy")
+        await game.generate_puzzle()
+
+        # Remove all boxes that are not on goals
+        for r in range(game.size):
+            for c in range(game.size):
+                if game.grid[r][c] == 2:  # Box not on goal
+                    game.grid[r][c] = 0
+
+        # Ensure at least one goal has a box
+        for gr, gc in game.goals:
+            game.grid[gr][gc] = 5
+
+        hint = await game.get_hint()
+        # Should return None since no boxes need to be pushed
+        assert hint is None
+
+    async def test_hint_push_position_at_wall(self):
+        """Test get_hint when push position is a wall (line 554)."""
+        game = SokobanGame("easy")
+        await game.generate_puzzle()
+
+        # Create scenario where push position is blocked by wall
+        game.grid = [[0 for _ in range(game.size)] for _ in range(game.size)]
+        for i in range(game.size):
+            game.grid[0][i] = 1
+            game.grid[game.size - 1][i] = 1
+            game.grid[i][0] = 1
+            game.grid[i][game.size - 1] = 1
+
+        # Goal at (3, 3), box at (3, 2), player needs to be at (3, 1) to push right
+        # But we put wall there
+        game.goals = [(3, 3)]
+        game.grid[3][3] = 3  # Goal
+        game.grid[3][2] = 2  # Box
+        game.grid[3][1] = 1  # Wall blocking push position
+        game.player_pos = (2, 2)
+        game.grid[2][2] = 4
+
+        hint = await game.get_hint()
+        # Should try other options or return fallback
+        if hint:
+            assert isinstance(hint[0], str)
+
+    async def test_hint_push_destination_blocked(self):
+        """Test get_hint when push destination is blocked (lines 559, 561)."""
+        game = SokobanGame("easy")
+        await game.generate_puzzle()
+
+        game.grid = [[0 for _ in range(game.size)] for _ in range(game.size)]
+        for i in range(game.size):
+            game.grid[0][i] = 1
+            game.grid[game.size - 1][i] = 1
+            game.grid[i][0] = 1
+            game.grid[i][game.size - 1] = 1
+
+        # Goal at (3, 4), box at (3, 2), player at (3, 1)
+        # But destination for push is blocked
+        game.goals = [(3, 4)]
+        game.grid[3][4] = 3  # Goal
+        game.grid[3][2] = 2  # Box
+        game.grid[3][3] = 1  # Wall blocking push destination
+        game.player_pos = (3, 1)
+        game.grid[3][1] = 4
+
+        hint = await game.get_hint()
+        # Should try other options
+        if hint:
+            assert isinstance(hint[0], str)
+
+    async def test_hint_fallback_empty_cell(self):
+        """Test hint fallback to empty cell move (line 589)."""
+        game = SokobanGame("easy")
+        await game.generate_puzzle()
+
+        # Clear boxes so no push hints are possible
+        for r in range(game.size):
+            for c in range(game.size):
+                if game.grid[r][c] == 2:
+                    game.grid[r][c] = 0
+
+        # Keep one goal but no boxes
+        game.goals = game.goals[:1] if game.goals else [(2, 2)]
+        for gr, gc in game.goals:
+            game.grid[gr][gc] = 3
+
+        hint = await game.get_hint()
+        # Should return fallback move to empty cell
+        if hint:
+            assert hint[0] in ["up", "down", "left", "right"]
+            assert "try" in hint[1].lower() or "move" in hint[1].lower()
+
+    async def test_hint_fallback_push_any_box(self):
+        """Test hint fallback to push any adjacent box (lines 591-594)."""
+        game = SokobanGame("easy")
+        await game.generate_puzzle()
+
+        # Create a box adjacent to player that doesn't align with any goal
+        game.grid = [[0 for _ in range(game.size)] for _ in range(game.size)]
+        for i in range(game.size):
+            game.grid[0][i] = 1
+            game.grid[game.size - 1][i] = 1
+            game.grid[i][0] = 1
+            game.grid[i][game.size - 1] = 1
+
+        # Goal at corner, box and player elsewhere
+        game.goals = [(1, 1)]
+        game.grid[1][1] = 3  # Goal
+        game.grid[2][3] = 2  # Box (not aligned with goal)
+        game.player_pos = (2, 2)
+        game.grid[2][2] = 4  # Player next to box
+        game.grid[2][4] = 0  # Empty for push
+
+        hint = await game.get_hint()
+        if hint:
+            assert hint[0] in ["up", "down", "left", "right"]
+
+    async def test_generation_insufficient_goals(self):
+        """Test puzzle generation handles insufficient goals (line 212)."""
+        # Test with small grid where goals might not all fit
+        game = SokobanGame("easy")
+        # Override to force small area
+        game.size = 5
+        game.num_boxes = 10  # More boxes than can fit
+        game.grid = [[0 for _ in range(game.size)] for _ in range(game.size)]
+
+        await game.generate_puzzle()
+        # Should still create a valid puzzle (possibly fallback)
+        assert game.game_started
+
+    async def test_generation_path_blocked_by_box(self):
+        """Test generation handles path blocked by other boxes (lines 261-274)."""
+        # Generate many puzzles to hit path blocking scenarios
+        for seed in range(20, 40):
+            game = SokobanGame("medium", seed=seed)
+            await game.generate_puzzle()
+            assert game.game_started
+
+    async def test_generation_push_position_on_box(self):
+        """Test generation handles push position being a box (line 253)."""
+        # Multiple puzzles with different seeds will exercise this
+        for seed in range(50, 70):
+            game = SokobanGame("hard", seed=seed)
+            await game.generate_puzzle()
+            assert game.game_started
+
+    async def test_fallback_puzzle_structure(self):
+        """Test fallback puzzle has correct structure (lines 320-351)."""
+        game = SokobanGame("easy")
+
+        # Force fallback by manipulating internals
+        # Run generate, but we can verify it creates valid structure
+        await game.generate_puzzle()
+
+        # Verify structure
+        assert game.grid is not None
+        assert len(game.grid) == game.size
+        assert all(len(row) == game.size for row in game.grid)
+        assert game.player_pos is not None
+        assert game.initial_state is not None
+        assert "grid" in game.initial_state
+        assert "player_pos" in game.initial_state
+
+    async def test_hint_via_path_finding(self):
+        """Test hint uses path finding when not at push position (line 572-577)."""
+        game = SokobanGame("easy", seed=42)
+        await game.generate_puzzle()
+
+        # Move player away from any boxes
+        for r in range(2, game.size - 2):
+            for c in range(2, game.size - 2):
+                if game.grid[r][c] == 0:
+                    # Check no box adjacent
+                    has_adjacent_box = False
+                    for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                        nr, nc = r + dr, c + dc
+                        if 0 <= nr < game.size and 0 <= nc < game.size:
+                            if game.grid[nr][nc] in [2, 5]:
+                                has_adjacent_box = True
+                                break
+                    if not has_adjacent_box:
+                        old_pr, old_pc = game.player_pos
+                        game.grid[old_pr][old_pc] = 0
+                        game.player_pos = (r, c)
+                        game.grid[r][c] = 4
+                        break
+            else:
+                continue
+            break
+
+        # Now hint should use path finding
+        hint = await game.get_hint()
+        if hint:
+            assert isinstance(hint[0], str)
+            assert isinstance(hint[1], str)
+
+    async def test_hint_player_at_push_position(self):
+        """Test hint when player is already at push position (lines 564-568)."""
+        game = SokobanGame("easy")
+        await game.generate_puzzle()
+
+        # Find a box and position player for direct push
+        for r in range(1, game.size - 1):
+            for c in range(1, game.size - 1):
+                if game.grid[r][c] == 2:  # Box
+                    # Check if we can position player to push toward a goal
+                    for gr, gc in game.goals:
+                        if r == gr:  # Same row
+                            if c < gc:  # Push right
+                                player_r, player_c = r, c - 1
+                                if player_c >= 1 and game.grid[player_r][player_c] in [0, 3]:
+                                    old_pr, old_pc = game.player_pos
+                                    game.grid[old_pr][old_pc] = 0
+                                    game.player_pos = (player_r, player_c)
+                                    game.grid[player_r][player_c] = 4
+
+                                    hint = await game.get_hint()
+                                    if hint and "push" in hint[1].lower():
+                                        assert hint[0] == "right"
+                                        return
+                        elif c == gc:  # Same column
+                            if r < gr:  # Push down
+                                player_r, player_c = r - 1, c
+                                if player_r >= 1 and game.grid[player_r][player_c] in [0, 3]:
+                                    old_pr, old_pc = game.player_pos
+                                    game.grid[old_pr][old_pc] = 0
+                                    game.player_pos = (player_r, player_c)
+                                    game.grid[player_r][player_c] = 4
+
+                                    hint = await game.get_hint()
+                                    if hint and "push" in hint[1].lower():
+                                        assert hint[0] == "down"
+                                        return

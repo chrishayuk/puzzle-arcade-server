@@ -22,9 +22,12 @@ classifiers = [
 ]
 
 dependencies = [
+    "chuk-gym-core>=0.1.1",
     "chuk-protocol-server>=0.1.0",
     "pydantic>=2.0.0",
 ]
+
+# chuk-gym-core now installed from PyPI
 
 [project.optional-dependencies]
 dev = [
@@ -42,6 +45,7 @@ dev = [
 [project.scripts]
 puzzle-arcade-server = "puzzle_arcade_server.server:run_server"
 puzzle-arcade-eval = "puzzle_arcade_server.eval:main"
+puzzle-arcade-export = "puzzle_arcade_server.export.dataset:main"
 
 [project.urls]
 Homepage = "https://github.com/chrishayuk/puzzle-arcade-server"
