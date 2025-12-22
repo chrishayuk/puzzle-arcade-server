@@ -473,7 +473,7 @@ wheels = [
 
 [[package]]
 name = "puzzle-arcade-server"
-version = "0.7"
+version = "0.8"
 source = { editable = "." }
 dependencies = [
     { name = "chuk-gym-core" },
